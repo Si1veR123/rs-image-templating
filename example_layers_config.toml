@@ -1,0 +1,9 @@
+
+[[layer]]
+type = "rectangle"
+width = 60
+height = 57.5
+
+[[layer.filter]]
+type = "brightness"
+multiplier = 0.5

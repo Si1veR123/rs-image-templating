@@ -3,13 +3,15 @@ use crate::{colors::*, pixel::ImagePixels, parser::ParsedArgs};
 
 use std::collections::HashMap;
 
-struct Rectangle {
+pub struct Rectangle {
     pixels: ImagePixels
 }
 
 
 impl Layer for Rectangle {
-    fn init(args: HashMap<&str, ParsedArgs>) -> Self {
+    fn new_layer(
+        args: HashMap<String, ParsedArgs>
+    ) -> Self {
         let width = args.get("width")
             .expect("Expected a width for Rectangle.")
             .as_int()

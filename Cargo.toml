@@ -9,3 +9,8 @@ edition = "2021"
 name = "image_template"
 
 [dependencies]
+toml = { version = "0.7.2", optional = true }
+
+[features]
+default = ["toml-parser"]
+toml-parser = ["dep:toml"]
