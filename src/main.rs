@@ -14,6 +14,8 @@ fn main() {
     let mut parsed = TomlLayerParser::parse::<_, DefaultLayerDeserializer, DefaultFilterDeserializer>(buf_reader);
 
     for (layer, filters) in &mut parsed {
-        layer.apply_filters(filters)
+        layer.apply_filters(filters);
+
+        println!("{:?}", layer.get_image().get_pixels())
     }
 }

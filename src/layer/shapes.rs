@@ -27,7 +27,7 @@ impl Layer for Rectangle {
         assert!(height.is_positive());
 
         let background_color = args.get("background-color")
-            .unwrap_or(&ParsedArgs::RGBAColor(BLACK))
+            .unwrap_or(&ParsedArgs::RGBAColor(WHITE))
             .as_rgb_color()
             .expect("Expected a color for background color.");
         

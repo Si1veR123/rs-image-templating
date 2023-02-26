@@ -3,6 +3,7 @@
 type = "rectangle"
 width = 60
 height = 57.5
+background-color = "(100, 100, 50)"
 
 [[layer.filter]]
 type = "brightness"

@@ -51,6 +51,29 @@ impl ParsedArgs {
     pub fn as_rgb_color(&self) -> Option<RGBAColor> {
         match self {
             ParsedArgs::RGBAColor(c) => Some(c.clone()),
+            ParsedArgs::String(s) => {
+                let inner = s.trim_start_matches('(').trim_end_matches(')');
+                let mut numbers = inner.split(',');
+
+                let mut numbers_parsed: [f64; 4] = [255.0; 4];
+                for n in 0..4 {
+                    let next_num_str = numbers.next();
+
+                    if next_num_str.is_none() {
+                        break;
+                    }
+                    
+                    let parsed = next_num_str.unwrap().trim().parse();
+
+                    if parsed.is_err() {
+                        return None
+                    }
+
+                    numbers_parsed[n] = parsed.unwrap();
+                }
+
+                Some(RGBAColor(numbers_parsed[0], numbers_parsed[1], numbers_parsed[2], numbers_parsed[3]))
+            }
             _ => None
         }
     }
