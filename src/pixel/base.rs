@@ -37,8 +37,16 @@ impl ImagePixels {
         &mut self.pixels
     }
 
+    pub fn get_pixel_at(&self, x: usize, y: usize) -> Option<&RGBAColor> {
+        self.pixels.get(x + y * self.width)
+    }
+
     pub fn height(&self) -> usize {
         self.pixels.len() / (self.width as usize)
+    }
+
+    pub fn width(&self) -> usize {
+        self.width
     }
 } 
 

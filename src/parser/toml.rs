@@ -1,6 +1,8 @@
-use crate::{layer::Layer, filters::LayerFilter};
+use crate::layer::Layer;
+use crate::canvas::Canvas;
+use crate::filters::LayerFilter;
 use crate::parser::ParsedArgs;
-use super::{LayerParser, ConfigDeserializer, LayerFilterTuple};
+use super::{LayerParser, ConfigDeserializer};
 use std::io::BufRead;
 use std::collections::HashMap;
 use toml::{from_str, Value};
@@ -19,13 +21,27 @@ fn toml_to_args_hashmap(map: toml::map::Map<String, Value>) -> HashMap<String, P
 pub struct TomlLayerParser {}
 
 impl LayerParser for TomlLayerParser {
-    fn parse<R: BufRead, L: ConfigDeserializer<Box<dyn Layer>>, F: ConfigDeserializer<Box<dyn LayerFilter>>>(mut reader: R) -> LayerFilterTuple {
+    fn parse<R: BufRead, L: ConfigDeserializer<Box<dyn Layer>>, F: ConfigDeserializer<Box<dyn LayerFilter>>>(mut reader: R) -> Canvas {
         let mut buf = String::new();
         let _len = reader.read_to_string(&mut buf).expect("Invalid chars in file.");
         let toml_parsed: Value = from_str(&buf).expect("Invalid toml.");
 
-        let layers = toml_parsed.as_table()
-            .expect("Root of toml isn't table.")
+        let toml_table = toml_parsed.as_table().expect("Root of toml isn't table.");
+
+
+        // get width and height, into ParsedArgs, as int
+        let width = <Value as TryInto<ParsedArgs>>::try_into(
+            toml_table.get("width").expect("Width not provided.").clone()
+        ).expect("Invalid width value.").as_int().expect("Invalid width value.");
+        assert!(width >= 0);
+
+        let height = <Value as TryInto<ParsedArgs>>::try_into(
+            toml_table.get("height").expect("Height not provided.").clone()
+        ).expect("Invalid height value.").as_int().expect("Invalid height value.");
+        assert!(height >= 0);
+
+
+        let layers = toml_table
             .get("layer")
             .expect("No layers found.")
             .as_array()
@@ -70,6 +86,6 @@ impl LayerParser for TomlLayerParser {
             layer_buf.push((layer, filter_objects));
         }
 
-        layer_buf
+        Canvas::from_layers_and_filters(layer_buf, width as u32, height as u32)
     }
 }

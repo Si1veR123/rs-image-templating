@@ -1,19 +1,20 @@
-use crate::{colors::RGBAColor, layer::Layer, filters::LayerFilter};
+use crate::{colors::RGBAColor, layer::Layer, filters::LayerFilter, canvas::Canvas};
 
 use std::{io::BufRead, collections::HashMap};
 use toml::Value;
 
 pub type LayerFilterTuple = Vec<(Box<dyn Layer>, Vec<Box<dyn LayerFilter>>)>;
 pub trait LayerParser {
-    fn parse<R: BufRead, L: ConfigDeserializer<Box<dyn Layer>>, F: ConfigDeserializer<Box<dyn LayerFilter>>>(reader: R) -> LayerFilterTuple;
+    fn parse<R: BufRead, L: ConfigDeserializer<Box<dyn Layer>>, F: ConfigDeserializer<Box<dyn LayerFilter>>>(reader: R) -> Canvas;
 }
 
 #[derive(Debug)]
 pub enum ParsedArgs {
     String(String),
-    Integer(i64),
+    Integer(i32),
     Float(f64),
     RGBAColor(RGBAColor),
+    Coord2D((i32, i32)),
     Boolean(bool)
 }
 
@@ -32,10 +33,10 @@ impl ParsedArgs {
         }
     }
 
-    pub fn as_int(&self) -> Option<i64> {
+    pub fn as_int(&self) -> Option<i32> {
         match self {
             ParsedArgs::Integer(i) => Some(*i),
-            ParsedArgs::Float(f) => Some(f.clone() as i64),
+            ParsedArgs::Float(f) => Some(f.clone() as i32),
             _ => None
         }
     }
@@ -77,6 +78,27 @@ impl ParsedArgs {
             _ => None
         }
     }
+
+    pub fn as_coord_2d(&self) -> Option<(i32, i32)> {
+        match self {
+            ParsedArgs::Coord2D(c) => Some(c.clone()),
+            ParsedArgs::String(s) => {
+                let inner = s.trim_start_matches("(").trim_end_matches(")");
+                let mut nums = inner.split(",");
+
+                Some((nums.next()?.parse().ok()?, nums.next()?.parse().ok()?))
+            },
+            _ => None
+        }
+    }
+
+    pub fn as_bool(&self) -> Option<bool> {
+        match self {
+            ParsedArgs::Boolean(b) => Some(b.clone()),
+            ParsedArgs::String(s) => s.parse().ok(),
+            _ => None
+        }
+    }
 }
 
 impl TryFrom<toml::Value> for ParsedArgs {
@@ -85,7 +107,11 @@ impl TryFrom<toml::Value> for ParsedArgs {
     fn try_from(v: toml::Value) -> Result<Self, Self::Error> {
         match v {
             Value::String(s) => Ok(Self::String(s)),
-            Value::Integer(i) => Ok(Self::Integer(i)),
+            Value::Integer(i) => Ok(
+                Self::Integer(
+                    i.try_into().ok().ok_or(())?
+                )
+            ),
             Value::Float(f) => Ok(Self::Float(f)),
             Value::Boolean(b) => Ok(Self::Boolean(b)),
             _ => Err(())

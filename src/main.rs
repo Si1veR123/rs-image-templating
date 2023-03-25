@@ -11,11 +11,8 @@ fn main() {
     let file = File::open("example_layers_config.toml").unwrap();
     let buf_reader = BufReader::new(file);
 
-    let mut parsed = TomlLayerParser::parse::<_, DefaultLayerDeserializer, DefaultFilterDeserializer>(buf_reader);
-
-    for (layer, filters) in &mut parsed {
-        layer.apply_filters(filters);
-
-        println!("{:?}", layer.get_image().get_pixels())
-    }
+    let canvas = TomlLayerParser::parse::<_, DefaultLayerDeserializer, DefaultFilterDeserializer>(buf_reader);
+    let final_image = canvas.aggregate_layers_into_image_lib();
+    let r = final_image.save("output.png");
+    println!("{:?}", r);
 }

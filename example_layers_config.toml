@@ -1,4 +1,7 @@
 
+width = 100
+height = 100
+
 [[layer]]
 type = "rectangle"
 width = 60

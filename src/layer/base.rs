@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use crate::{parser::{ParsedArgs, ConfigDeserializer}, pixel::ImagePixels, filters::LayerFilter};
+use crate::{parser::{ParsedArgs, ConfigDeserializer}, pixel::ImagePixels, filters::LayerFilter, colors::RGBAColor};
 use super::shapes;
 
 pub trait Layer {
@@ -13,6 +13,7 @@ pub trait Layer {
             filter.process(self.get_image())
         }
     }
+    fn pixel_at(&self, x: u32, y: u32) -> Option<RGBAColor>;
 }
 
 pub struct DefaultLayerDeserializer {}
