@@ -10,8 +10,8 @@ pub fn over_operator(pixel1: &RGBAColor, pixel2: &RGBAColor) -> RGBAColor {
     let new_alpha = alpha1 + second_alpha_component;
 
     let new_color_r = (pixel1.0*alpha1 + pixel2.0*alpha2*second_alpha_component)/new_alpha;
-    let new_color_b = (pixel1.1*alpha1 + pixel2.1*alpha2*second_alpha_component)/new_alpha;
-    let new_color_g = (pixel1.2*alpha1 + pixel2.2*alpha2*second_alpha_component)/new_alpha;
+    let new_color_g = (pixel1.1*alpha1 + pixel2.1*alpha2*second_alpha_component)/new_alpha;
+    let new_color_b = (pixel1.2*alpha1 + pixel2.2*alpha2*second_alpha_component)/new_alpha;
 
     RGBAColor(new_color_r, new_color_g, new_color_b, new_alpha*255.0)
 }
@@ -44,6 +44,13 @@ mod tests {
         let pixel2 = RGBAColor(50.0, 250.0, 0.0, 255.0);
 
         let new_pixel = over_operator(&pixel1, &pixel2);
-        assert_eq!(new_pixel, RGBAColor(125.0, 25.0, 175.0, 255.0));
+        assert_eq!(new_pixel, RGBAColor(125.0, 175.0, 25.0, 255.0));
+
+
+        let pixel1 = RGBAColor(200.0, 100.0, 50.0, 255.0);
+        let pixel2 = RGBAColor(50.0, 250.0, 0.0, 0.0);
+
+        let new_pixel = over_operator(&pixel1, &pixel2);
+        assert_eq!(new_pixel, RGBAColor(200.0, 100.0, 50.0, 255.0));
     }
 }

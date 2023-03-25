@@ -1,7 +1,6 @@
 use crate::colors::{RGBAColor, over_operator};
 use crate::layer::Layer;
 use crate::parser::LayerFilterTuple;
-use crate::pixel::ImagePixels;
 
 use image::{RgbaImage, Rgba};
 
@@ -24,11 +23,11 @@ impl Canvas {
 
     fn aggregate_pixel(&self, x: u32, y: u32) -> RGBAColor {
         // combine pixels from all layers
-        let mut running_pixel = RGBAColor(0.0, 0.0, 0.0, 0.0);
+        let mut running_pixel = RGBAColor(255.0, 255.0, 255.0, 0.0);
         for layer in &self.layers {
             let layer_pixel = layer.pixel_at(x, y);
             if layer_pixel.is_some() {
-                running_pixel = over_operator(&running_pixel, &layer_pixel.unwrap())
+                running_pixel = over_operator(&layer_pixel.unwrap(), &running_pixel)
             }
         }
 

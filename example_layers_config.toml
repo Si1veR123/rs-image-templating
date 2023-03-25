@@ -6,8 +6,16 @@ height = 100
 type = "rectangle"
 width = 60
 height = 57.5
-background-color = "(100, 100, 50)"
+background-color = "(1, 255, 1, 100)"
+
+[[layer]]
+type = "rectangle"
+width = 60
+height = 57.5
+background-color = "(255, 1, 1, 127.5)"
+position = "(50, 50)"
+center = true
 
 [[layer.filter]]
 type = "brightness"
-multiplier = 0.5
+multiplier = 1

@@ -86,7 +86,7 @@ impl ParsedArgs {
                 let inner = s.trim_start_matches("(").trim_end_matches(")");
                 let mut nums = inner.split(",");
 
-                Some((nums.next()?.parse().ok()?, nums.next()?.parse().ok()?))
+                Some((nums.next()?.trim().parse().ok()?, nums.next()?.trim().parse().ok()?))
             },
             _ => None
         }
