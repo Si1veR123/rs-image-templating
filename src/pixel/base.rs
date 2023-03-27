@@ -20,7 +20,7 @@ impl ImagePixels {
 
     pub fn as_pixel_rows(&self) -> Vec<Vec<RGBAColor>> {
         let mut new_pixels_buffer = Vec::with_capacity(self.height());
-        let rows = self.pixels.windows(self.width);
+        let rows = self.pixels.chunks(self.width);
 
         for row in rows {
             new_pixels_buffer.push(row.to_vec())
