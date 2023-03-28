@@ -7,8 +7,9 @@ type = "image"
 path = "output.png"
 position = "(500, 500)"
 center = true
-scale = 0.7
+scale = 1
 scale-filter = "lanczos"
+
 
 [[layer]]
 type = "rectangle"

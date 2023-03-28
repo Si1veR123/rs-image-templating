@@ -14,5 +14,8 @@ fn main() {
     let canvas = TomlLayerParser::parse::<_, DefaultLayerDeserializer, DefaultFilterDeserializer>(buf_reader);
     let final_image = canvas.aggregate_layers_into_image_lib();
     let r = final_image.save("output.png");
-    println!("{:?}", r);
+    
+    if r.is_err() {
+        println!("Error occured: {:?}", r.unwrap_err())
+    }
 }
