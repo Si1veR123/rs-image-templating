@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::{parser::{ParsedArgs, ConfigDeserializer}, pixel::ImagePixels, filters::LayerFilter, colors::RGBAColor};
 use super::shapes;
 use super::images;
+use super::text;
 
 pub trait Layer {
     fn get_image(&mut self) -> &mut ImagePixels;
@@ -17,14 +18,23 @@ pub trait Layer {
     fn pixel_at(&self, x: u32, y: u32) -> Option<RGBAColor>;
 }
 
-pub struct DefaultLayerDeserializer {}
+macro_rules! layer_match {
+    ($from:ident, $args:ident, $($name: literal => $path: ty),*) => {
+        match $from {
+            $($name => Box::new(<$path>::new_layer($args)) as Box<dyn Layer>,)*
+            _ => panic!("Invalid layer name.")
+        }
+    };
+}
+
+pub struct DefaultLayerDeserializer;
 
 impl ConfigDeserializer<Box<dyn Layer>> for DefaultLayerDeserializer {
     fn from_str_and_args(from: &str, args: HashMap<String, ParsedArgs>) -> Box<dyn Layer> {
-        match from {
-            "rectangle" => Box::new(shapes::Rectangle::new_layer(args)) as Box<dyn Layer>,
-            "image" => Box::new(images::Image::new_layer(args)) as Box<dyn Layer>,
-            _ => panic!("Invalid layer name")
-        }
+        layer_match!(from, args,
+            "rectangle" => shapes::Rectangle,
+            "image" => images::Image,
+            "text" => text::Text
+        )
     }
 }

@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use super::Layer;
 use crate::{colors::*, pixel::ImagePixels, parser::ParsedArgs};
 
@@ -9,7 +11,7 @@ pub struct Image {
 }
 
 impl Layer for Image {
-    fn new_layer(args: std::collections::HashMap<String, ParsedArgs>) -> Self {
+    fn new_layer(args: HashMap<String, ParsedArgs>) -> Self {
         let path = args.get("path")
             .expect("No path specified.")
             .as_str()
@@ -68,7 +70,7 @@ impl Layer for Image {
         if center {
             position = (position.0 - (width as i32)/2, position.1 - (height as i32)/2);
         }
-        let image_pixels = ImagePixels::from_pixels(width as usize, pixels.collect());
+        let image_pixels = ImagePixels::from_pixels(width, pixels.collect());
         Self { pixels: image_pixels, position }
     }
 
@@ -93,6 +95,6 @@ impl Layer for Image {
         let rel_y = y - self.position.1;
 
         // impossible for rel_x or rel_y to be negative, as x > x position, and y > y position
-        self.pixels.get_pixel_at(rel_x as usize, rel_y as usize).cloned()
+        self.pixels.get_pixel_at(rel_x as u32, rel_y as u32).cloned()
     }
 }

@@ -1,18 +1,9 @@
 
-width = 1000
-height = 1000
+width = 3000
+height = 1500
 
 [[layer]]
-type = "image"
-path = "output.png"
-position = "(500, 500)"
-center = true
-scale = 1
-scale-filter = "lanczos"
-
-
-[[layer]]
-type = "rectangle"
-width = 100
-height = 100
-background-color = "(255, 0, 0)"
+type = "text"
+text = "test text"
+font = "Montserrat"
+size = 200

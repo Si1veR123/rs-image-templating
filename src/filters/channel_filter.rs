@@ -23,7 +23,7 @@ impl LayerFilter for ChannelFilter {
         }
     }
 
-    fn new_with_args(args: HashMap<String, ParsedArgs>) -> Self where Self: Sized {
+    fn new_with_args(args: HashMap<String, ParsedArgs>) -> Self {
         let args_string = HashMap::from_iter(
             args.into_iter()
         );

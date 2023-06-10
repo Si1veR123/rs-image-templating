@@ -73,6 +73,6 @@ impl Layer for Rectangle {
         let rel_y = y - self.position.1;
 
         // impossible for rel_x or rel_y to be negative, as x > x position, and y > y position
-        self.pixels.get_pixel_at(rel_x as usize, rel_y as usize).cloned()
+        self.pixels.get_pixel_at(rel_x as u32, rel_y as u32).cloned()
     }
 }
