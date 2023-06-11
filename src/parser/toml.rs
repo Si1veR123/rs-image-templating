@@ -82,7 +82,7 @@ impl LayerParser for TomlLayerParser {
             let layer_type = type_arg.as_str().expect("Invalid 'type' type on layer :)");
             let trimmed = layer_type.trim_matches('"');
 
-            let layer = L::from_str_and_args(&trimmed, parsed_args_hashmap);
+            let layer = L::from_str_and_args(trimmed, parsed_args_hashmap);
             layer_buf.push((layer, filter_objects));
         }
 

@@ -9,17 +9,14 @@ pub struct FlipFilter {
 
 impl LayerFilter for FlipFilter {
     fn process(&self, pixels: &mut ImagePixels) {
-        let direction = self.args.get("direction")
-            .and_then(|x| Some(
-                x.as_str().expect("Expected string (horizontal/vertical/both) for flip direction.")
-            ));
+        let direction = self.args.get("direction").map(|x| x.as_str().expect("Expected string (horizontal/vertical/both) for flip direction."));
         
         match direction {
             Some("vertical") => {
                 // flip in place
                 // move from top and bottom to center, swaping each row of pixels
                 let width = pixels.width();
-                let height = pixels.height();
+                let _height = pixels.height();
 
                 let split_point = ((pixels.height()/2)*width) as usize;
                 let odd_height = pixels.height() % 2 == 1;

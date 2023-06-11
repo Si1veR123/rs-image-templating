@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use crate::{parser::{ParsedArgs, ConfigDeserializer}, pixel::ImagePixels, filters::LayerFilter, colors::RGBAColor};
 use super::shapes;
 use super::images;
+#[cfg(feature = "text")]
 use super::text;
 
 pub trait Layer {
@@ -30,11 +31,19 @@ macro_rules! layer_match {
 pub struct DefaultLayerDeserializer;
 
 impl ConfigDeserializer<Box<dyn Layer>> for DefaultLayerDeserializer {
+    #[cfg(feature = "text")]
     fn from_str_and_args(from: &str, args: HashMap<String, ParsedArgs>) -> Box<dyn Layer> {
         layer_match!(from, args,
             "rectangle" => shapes::Rectangle,
             "image" => images::Image,
             "text" => text::Text
+        )
+    }
+    #[cfg(not(feature = "text"))]
+    fn from_str_and_args(from: &str, args: HashMap<String, ParsedArgs>) -> Box<dyn Layer> {
+        layer_match!(from, args,
+            "rectangle" => shapes::Rectangle,
+            "image" => images::Image
         )
     }
 }

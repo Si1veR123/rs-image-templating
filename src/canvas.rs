@@ -35,10 +35,10 @@ impl Canvas {
     }
 
     pub fn aggregate_layers_into_image_lib(&self) -> RgbaImage {
-        let img = RgbaImage::from_fn(self.width, self.height, |x, y| {
+        
+        RgbaImage::from_fn(self.width, self.height, |x, y| {
             let p = self.aggregate_pixel(x, y);
             Rgba([p.0 as u8, p.1 as u8, p.2 as u8, p.3 as u8])
-        });
-        img
+        })
     }
 }

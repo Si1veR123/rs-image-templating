@@ -66,7 +66,7 @@ impl LayerFilter for RotationFilter {
             let y = i / new_w;
             // do inverse of get rotated position (start from rotated position, rotate by anticlockwise angle, find original pixel)
             // results in a clockwise rotation
-            let rotated_position = get_rotated_position((x as i32, y as i32), new_w, new_h, old_w, old_h, degrees_anticlockwise);
+            let rotated_position = get_rotated_position((x, y), new_w, new_h, old_w, old_h, degrees_anticlockwise);
             if (rotated_position.0 < 0) || (rotated_position.1 < 0) {
                 continue;
             }

@@ -36,7 +36,7 @@ impl ParsedArgs {
     pub fn as_int(&self) -> Option<i32> {
         match self {
             ParsedArgs::Integer(i) => Some(*i),
-            ParsedArgs::Float(f) => Some(f.clone() as i32),
+            ParsedArgs::Float(f) => Some(*f as i32),
             _ => None
         }
     }
@@ -44,7 +44,7 @@ impl ParsedArgs {
     pub fn as_float(&self) -> Option<f64> {
         match self {
             ParsedArgs::Float(f) => Some(*f),
-            ParsedArgs::Integer(i) => Some(i.clone() as f64),
+            ParsedArgs::Integer(i) => Some(*i as f64),
             _ => None
         }
     }
@@ -81,10 +81,10 @@ impl ParsedArgs {
 
     pub fn as_coord_2d(&self) -> Option<(i32, i32)> {
         match self {
-            ParsedArgs::Coord2D(c) => Some(c.clone()),
+            ParsedArgs::Coord2D(c) => Some(*c),
             ParsedArgs::String(s) => {
-                let inner = s.trim_start_matches("(").trim_end_matches(")");
-                let mut nums = inner.split(",");
+                let inner = s.trim_start_matches('(').trim_end_matches(')');
+                let mut nums = inner.split(',');
 
                 Some((nums.next()?.trim().parse().ok()?, nums.next()?.trim().parse().ok()?))
             },
@@ -94,7 +94,7 @@ impl ParsedArgs {
 
     pub fn as_bool(&self) -> Option<bool> {
         match self {
-            ParsedArgs::Boolean(b) => Some(b.clone()),
+            ParsedArgs::Boolean(b) => Some(*b),
             ParsedArgs::String(s) => s.parse().ok(),
             _ => None
         }

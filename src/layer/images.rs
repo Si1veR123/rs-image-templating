@@ -23,10 +23,7 @@ impl Layer for Image {
             .as_float()
             .expect("Expected a number for scale.");
 
-        let filtertype_arg = args.get("scale-filter")
-            .and_then(|x| Some(x.as_str().expect("Expected string for scale-filter.")))
-            .and_then(|x| {
-                Some(match x {
+        let filtertype_arg = args.get("scale-filter").map(|x| x.as_str().expect("Expected string for scale-filter.")).map(|x| match x {
                     "cubic" => imageops::CatmullRom,
                     "gaussian" => imageops::Gaussian,
                     "nearest" => imageops::Nearest,
@@ -34,7 +31,6 @@ impl Layer for Image {
                     "lanczos" => imageops::Lanczos3,
                     _ => panic!("Invalid filter-type.")
                 })
-            })
             .unwrap_or(imageops::Lanczos3);
 
         let nwidth = ((image.width() as f64) * scale) as u32;
@@ -50,10 +46,10 @@ impl Layer for Image {
 
         let pixels = raw.chunks(4).map(|p| 
             RGBAColor(
-                (p.get(0).unwrap().clone() * 255.0) as f64,
-                (p.get(1).unwrap().clone() * 255.0) as f64,
-                (p.get(2).unwrap().clone() * 255.0) as f64,
-                (p.get(3).unwrap().clone() * 255.0) as f64
+                (*p.first().unwrap() * 255.0) as f64,
+                (*p.get(1).unwrap() * 255.0) as f64,
+                (*p.get(2).unwrap() * 255.0) as f64,
+                (*p.get(3).unwrap() * 255.0) as f64
             )
         );
 
