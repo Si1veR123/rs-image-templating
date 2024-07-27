@@ -1,44 +1,45 @@
-use crate::colors::{RGBAColor, over_operator};
-use crate::layer::Layer;
-use crate::parser::LayerFilterTuple;
+use crate::{
+    layers::Layer,
+    pixels::{
+        image::Image, pixel::{AlphaPixel, PixelChannel, over_operator},
+    }
+};
 
-use image::{RgbaImage, Rgba};
-
-pub struct Canvas {
-    layers: Vec<Box<dyn Layer>>,
-    width: u32,
-    height: u32
+pub struct Canvas<T> {
+    pub layers: Vec<Box<dyn Layer<T>>>,
+    pub width: usize,
+    pub height: usize
 }
 
-impl Canvas {
-    pub fn from_layers_and_filters(mut layers: LayerFilterTuple, width: u32, height: u32) -> Self {
-        for (layer, filters) in &mut layers {
-            layer.apply_filters(filters)
-        }
-
-        let new_layers_vec: Vec<_> = layers.into_iter().map(|e| e.0).collect();
-
-        Self { layers: new_layers_vec, width, height }
+impl<T: PixelChannel> Canvas<T> {
+    pub fn from_dimensions(width: usize, height: usize) -> Self {
+        Self { layers: vec![], width, height }
     }
 
-    fn aggregate_pixel(&self, x: u32, y: u32) -> RGBAColor {
-        // combine pixels from all layers
-        let mut running_pixel = RGBAColor(255.0, 255.0, 255.0, 0.0);
+    pub fn add_layer<L: Layer<T> + 'static>(&mut self, layer: L) {
+        self.layers.push(Box::new(layer));
+    }
+
+    pub fn pixel_at(&mut self, x: usize, y: usize) -> AlphaPixel<T> {
+        let mut running_pixel = AlphaPixel {r: T::max_value(), g: T::max_value(), b: T::max_value(), a: T::zero()};
         for layer in &self.layers {
-            let layer_pixel = layer.pixel_at(x, y);
-            if layer_pixel.is_some() {
-                running_pixel = over_operator(&layer_pixel.unwrap(), &running_pixel)
+            let layer_pixel = layer.filtered_pixel_at(x, y);
+
+            if let Some(p) = layer_pixel {
+                running_pixel = over_operator(&p, &running_pixel)
             }
         }
 
         running_pixel
     }
 
-    pub fn aggregate_layers_into_image_lib(&self) -> RgbaImage {
-        
-        RgbaImage::from_fn(self.width, self.height, |x, y| {
-            let p = self.aggregate_pixel(x, y);
-            Rgba([p.0 as u8, p.1 as u8, p.2 as u8, p.3 as u8])
-        })
+    pub fn flatten(&mut self) -> Image<T> {
+        let mut pixels = Vec::with_capacity(self.width*self.height);
+        for row in 0..self.height {
+            for col in 0..self.width {
+                pixels.push(self.pixel_at(col, row));
+            }
+        }
+        Image::from_pixels(pixels, self.width)
     }
 }
