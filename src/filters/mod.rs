@@ -1,4 +1,4 @@
-use crate::{layers::Layer, pixels::pixel::{AlphaPixel, PixelChannel}, rect::Rect};
+use crate::pixels::pixel::AlphaPixel;
 
 pub mod transform;
 

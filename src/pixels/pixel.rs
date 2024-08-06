@@ -1,13 +1,16 @@
-use num::{Bounded, FromPrimitive, Num, NumCast};
-use std::fmt::Debug;
+use bytemuck::NoUninit;
+use num::{Bounded, FromPrimitive, Num, NumCast, Zero};
+use image::ExtendedColorType;
+use std::{fmt::Debug, mem::size_of};
 
 // Requires Into<f32> for some float maths. TODO: Look into alternatives?
-pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + Bounded + Into<f32> {}
+pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + Bounded + Into<f32> + NoUninit {}
 
 impl PixelChannel for u8 {}
 impl PixelChannel for u16 {}
 
-#[derive(Copy, Clone)]
+#[repr(C)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct AlphaPixel<T> {
     pub r: T,
     pub g: T,
@@ -15,9 +18,26 @@ pub struct AlphaPixel<T> {
     pub a: T
 }
 
+impl<T: PixelChannel> AlphaPixel<T> {
+    pub const fn color_type() -> ExtendedColorType {
+        if size_of::<T>() == 1 {
+            ExtendedColorType::Rgba8
+        } else if size_of::<T>() == 2 {
+            ExtendedColorType::Rgba16
+        } else if size_of::<T>() == 4 {
+            ExtendedColorType::Rgba32F
+        } else {
+            unreachable!()
+        }
+    }
+}
+
+/// Safety: `AlphaPixel` has no padding and all T: PixelChannel are NoUninit
+unsafe impl<T: PixelChannel + 'static> NoUninit for AlphaPixel<T> {}
+
 impl<T: Debug> Debug for AlphaPixel<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_tuple("").field(&self.r).field(&self.g).field(&self.b).field(&self.a).finish()
+        f.debug_tuple("rgba").field(&self.r).field(&self.g).field(&self.b).field(&self.a).finish()
     }
 }
 
@@ -39,21 +59,20 @@ impl<T: PixelChannel> From<AlphaPixel<T>> for AlphaPixel<f32> {
     }
 }
 
-pub fn over_operator<T: PixelChannel>(pixel1: &AlphaPixel<T>, pixel2: &AlphaPixel<T>) -> AlphaPixel<T> {
-    let float_pixel1: AlphaPixel<f32> = pixel1.clone().into();
-    let float_pixel2: AlphaPixel<f32> = pixel2.clone().into();
+#[cfg(test)]
+mod tests {
+    use std::mem::align_of;
+    use super::*;
 
-    let second_alpha_component = float_pixel2.a*(1.0-float_pixel1.a);
-    let new_alpha = float_pixel1.a + second_alpha_component;
+    #[test]
+    fn pixel_no_padding() {
+        assert_eq!(size_of::<AlphaPixel<u8>>(), 4);
+        assert_eq!(size_of::<AlphaPixel<u16>>(), 8);
+    }
 
-    let new_color_r = (float_pixel1.r*float_pixel1.a + float_pixel2.r*float_pixel2.a*second_alpha_component)/new_alpha;
-    let new_color_g = (float_pixel1.g*float_pixel1.a + float_pixel2.g*float_pixel2.a*second_alpha_component)/new_alpha;
-    let new_color_b = (float_pixel1.b*float_pixel1.a + float_pixel2.b*float_pixel2.a*second_alpha_component)/new_alpha;
-
-    AlphaPixel {
-        r: T::from_f32(new_color_r*T::max_value().into()).unwrap(),
-        g: T::from_f32(new_color_g*T::max_value().into()).unwrap(),
-        b: T::from_f32(new_color_b*T::max_value().into()).unwrap(),
-        a: T::from_f32(new_alpha*T::max_value().into()).unwrap()
+    #[test]
+    fn pixel_alignment() {
+        assert_eq!(align_of::<AlphaPixel<u8>>(), 1);
+        assert_eq!(align_of::<AlphaPixel<u16>>(), 2);
     }
 }

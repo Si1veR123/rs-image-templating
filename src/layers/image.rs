@@ -17,7 +17,7 @@ impl<T: PixelChannel> Layer<T> for ImageLayer<T> {
         &self.filters
     }
 
-    fn unfiltered_pixel_at(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
+    fn unfiltered_pixel_at_unchecked(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
         self.im.pixel_at(x-self.x, y-self.y)
     }
 }

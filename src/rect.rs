@@ -8,6 +8,6 @@ pub struct Rect {
 
 impl Rect {
     pub fn contains(&self, x: usize, y: usize) -> bool {
-        x >= self.x && x <= (self.x+self.width) && y >= self.y && y <= (self.y+self.width)
+        x > self.x && x < (self.x+self.width) && y >= self.y && y <= (self.y+self.width)
     }
 }

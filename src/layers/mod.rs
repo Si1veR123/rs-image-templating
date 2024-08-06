@@ -2,6 +2,7 @@ use crate::{filters::Filter, pixels::{image::Image, pixel::{AlphaPixel, PixelCha
 
 pub mod image;
 pub mod shapes;
+pub mod text;
 
 pub trait Layer<T: PixelChannel> {
     /// Get a bounding Rect relative to top left of the canvas
@@ -25,20 +26,14 @@ pub trait Layer<T: PixelChannel> {
         Some(pixel)
     }
 
-    /// Get the pixel at a canvas location, before it has been filtered
-    fn unfiltered_pixel_at(&self, x: usize, y: usize) -> Option<AlphaPixel<T>>;
-
-    /// Convert a layer into an `Image`, which is a list of pixels
-    fn rasterize(&self) -> Image<T> {
-        let rect = self.get_rect();
-        
-        let mut pixels = Vec::with_capacity(rect.width*rect.height);
-        for row in 0..rect.height {
-            for col in 0..rect.width {
-                pixels.push(self.unfiltered_pixel_at(col+rect.x, row+rect.y).unwrap_or(AlphaPixel::default()));
-            }
+    fn unfiltered_pixel_at(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
+        if self.get_rect().contains(x, y) {
+            self.unfiltered_pixel_at_unchecked(x, y)
+        } else {
+            None
         }
-
-        Image::from_pixels(pixels, rect.width)
     }
+
+    /// Get the pixel at a canvas location, before it has been filtered, and assuming it is within the bounding `Rect`
+    fn unfiltered_pixel_at_unchecked(&self, x: usize, y: usize) -> Option<AlphaPixel<T>>;
 }

@@ -22,7 +22,7 @@ impl<T: PixelChannel> Layer<T> for RectangleLayer<T> {
         &self.filters
     }
 
-    fn unfiltered_pixel_at(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
+    fn unfiltered_pixel_at_unchecked(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
         if self.rect.contains(x, y) {
             Some(self.fill)
         } else {

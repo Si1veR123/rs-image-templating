@@ -1,7 +1,7 @@
 use crate::{
     layers::Layer,
     pixels::{
-        image::Image, pixel::{AlphaPixel, PixelChannel, over_operator},
+        blending::BlendingMethod, image::Image, pixel::{AlphaPixel, PixelChannel}
     }
 };
 
@@ -26,7 +26,7 @@ impl<T: PixelChannel> Canvas<T> {
             let layer_pixel = layer.filtered_pixel_at(x, y);
 
             if let Some(p) = layer_pixel {
-                running_pixel = over_operator(&p, &running_pixel)
+                running_pixel = BlendingMethod::OverOperator.blend(p, running_pixel);
             }
         }
 
@@ -40,6 +40,7 @@ impl<T: PixelChannel> Canvas<T> {
                 pixels.push(self.pixel_at(col, row));
             }
         }
-        Image::from_pixels(pixels, self.width)
+        // `pixels.len() = self.width*self.height`
+        Image::from_pixels(pixels, self.width).unwrap()
     }
 }
