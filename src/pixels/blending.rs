@@ -17,8 +17,8 @@ impl<'a, T: PixelChannel> BlendingMethod<'a, T> {
 }
 
 pub fn over_operator<T: PixelChannel>(pixel1: AlphaPixel<T>, pixel2: AlphaPixel<T>) -> AlphaPixel<T> {
-    let float_pixel1: AlphaPixel<f32> = pixel1.clone().into();
-    let float_pixel2: AlphaPixel<f32> = pixel2.clone().into();
+    let float_pixel1: AlphaPixel<f32> = pixel1.into();
+    let float_pixel2: AlphaPixel<f32> = pixel2.into();
 
     let second_alpha_component = float_pixel2.a*(1.0-float_pixel1.a);
     let new_alpha = float_pixel1.a + second_alpha_component;

@@ -1,4 +1,4 @@
-use crate::{filters::Filter, pixels::{image::Image, pixel::{AlphaPixel, PixelChannel}}, rect::Rect};
+use crate::{filters::Filter, pixels::{pixel::{AlphaPixel, PixelChannel}}, rect::Rect};
 
 pub mod image;
 pub mod shapes;

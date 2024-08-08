@@ -21,6 +21,12 @@ pub struct Image<T: PixelChannel> {
     pub height: usize,
 }
 
+impl<T: PixelChannel> Default for Image<T> {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl<T: PixelChannel> Image<T> {
     pub fn new() -> Self {
         Self { pixels: vec![], width: 0, height: 0 }
@@ -71,7 +77,7 @@ impl<T: PixelChannel> Image<T> {
 
     pub fn from_pixels(pixels: Vec<AlphaPixel<T>>, width: usize) -> Result<Self, NewImageError> {
         if width == 0 {
-            if pixels.len() == 0 {
+            if pixels.is_empty() {
                 return Ok(Self::new());
             } else {
                 return Err(NewImageError::ZeroWidth)

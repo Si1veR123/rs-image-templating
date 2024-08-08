@@ -16,13 +16,14 @@ pub struct TextSettings<T: PixelChannel> {
 }
 
 type SignedCoord = (isize, isize);
+type GlyphPositionMapping = HashMap<char, Vec<SignedCoord>>;
 
 impl<T: PixelChannel> TextSettings<T> {
     /// Return a HashMap mapping a glyph to a Vec of coordinates, the minimum coordinate, and the maximum coordinate
     /// 
     /// Coordinates are `isize` as some glyphs may have negative coordinates.
     /// The minimum coordinates can be used to shift all coordinates to be positive.
-    fn glyph_positions(&self) -> Result<(HashMap<char, Vec<SignedCoord>>, SignedCoord, SignedCoord), LayoutError> {
+    fn glyph_positions(&self) -> Result<(GlyphPositionMapping, SignedCoord, SignedCoord), LayoutError> {
         let mut positions: HashMap<char, Vec<(isize, isize)>> = HashMap::with_capacity(self.text.len());
         let mut minimum_coord = (0, 0);
         let mut maximum_coord = (0, 0);
@@ -83,7 +84,7 @@ pub struct TextLayer<T: PixelChannel> {
 impl<T: PixelChannel> TextLayer<T> {
     pub fn new(settings: TextSettings<T>, x: usize, y: usize) -> Result<Self, LayoutError> {
         let raster = settings.raster_from_settings()?;
-        Ok(Self { settings: settings, rasterized: raster, x, y, filters: vec![] })
+        Ok(Self { settings, rasterized: raster, x, y, filters: vec![] })
     }
 
     pub fn get_settings(&self) -> &TextSettings<T> {

@@ -1,5 +1,5 @@
 use bytemuck::NoUninit;
-use num::{Bounded, FromPrimitive, Num, NumCast, Zero};
+use num::{Bounded, FromPrimitive, Num, NumCast};
 use image::ExtendedColorType;
 use std::{fmt::Debug, mem::size_of};
 

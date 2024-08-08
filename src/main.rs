@@ -1,12 +1,7 @@
-use image_template::filters::transform::TranslateFilter;
 use image_template::layers::text::layout::{LayoutDirection, SpacingMode, TextLayout};
 use image_template::layers::text::{TextLayer, TextSettings};
 use image_template::pixels::pixel::AlphaPixel;
-use image_template::rect::Rect;
-use image_template::{
-    canvas::Canvas,
-    layers::shapes::RectangleLayer
-};
+use image_template::canvas::Canvas;
 
 fn main() {
     let mut canvas: Canvas<u8> = Canvas::from_dimensions(500, 500);
