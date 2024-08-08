@@ -1,9 +1,17 @@
 use std::path::Path;
 use bytemuck::must_cast_slice;
-use image::{error::{ParameterError, ParameterErrorKind}, save_buffer_with_format, ImageError, ImageFormat};
+use image::{error::{ParameterError, ParameterErrorKind}, save_buffer_with_format, ImageFormat};
 use num::Integer;
+use thiserror::Error;
 use super::{blending::BlendingMethod, pixel::{AlphaPixel, PixelChannel}};
 
+#[derive(Debug, Error)]
+pub enum NewImageError {
+    #[error("Width is incorrect")]
+    IncorrectWidth,
+    #[error("Width is 0, but buffer isn't zero-length")]
+    ZeroWidth
+}
 
 #[derive(Debug, Clone)]
 /// A collection of `AlphaPixel`s that represent an image. This is stored in a `Vec`.
@@ -14,6 +22,10 @@ pub struct Image<T: PixelChannel> {
 }
 
 impl<T: PixelChannel> Image<T> {
+    pub fn new() -> Self {
+        Self { pixels: vec![], width: 0, height: 0 }
+    }
+
     fn index_of(&self, x: usize, y: usize) -> usize {
         self.width*y + x
     }
@@ -37,7 +49,7 @@ impl<T: PixelChannel> Image<T> {
         self.pixels.get_mut(idx)
     }
 
-    pub fn coord_contains(&self, x: usize, y: usize) -> bool {
+    pub fn contains_coord(&self, x: usize, y: usize) -> bool {
         x < self.width && y < self.height
     }
 
@@ -51,17 +63,24 @@ impl<T: PixelChannel> Image<T> {
             let slice = self.index_of(x, y+row)..self.index_of(x+subim_width, y+row);
             let src_row = &image.row(row).unwrap()[0..subim_width];
             
-            self.pixels[slice.clone()].iter_mut()
+            self.pixels[slice].iter_mut()
                 .zip(src_row.iter())
                 .for_each(|(dest, src)| *dest = blend.blend(*dest, *src));
         }
     }
 
-    /// Will return Err(()) if `pixels.len() % width != 0`. This ensures that `width` and `height` are correct.
-    pub fn from_pixels(pixels: Vec<AlphaPixel<T>>, width: usize) -> Result<Self, ()> {
+    pub fn from_pixels(pixels: Vec<AlphaPixel<T>>, width: usize) -> Result<Self, NewImageError> {
+        if width == 0 {
+            if pixels.len() == 0 {
+                return Ok(Self::new());
+            } else {
+                return Err(NewImageError::ZeroWidth)
+            }
+        }
+
         let (height, rem) = pixels.len().div_rem(&width);
         if rem != 0 {
-            Err(())
+            Err(NewImageError::IncorrectWidth)
         } else {
             Ok(Self { pixels, width, height })
         }
@@ -72,9 +91,9 @@ impl<T: PixelChannel> Image<T> {
     /// Color type is determined by `color_type` method in AlphaPixel
     pub fn save<P: AsRef<Path>>(&self, path: P, format: ImageFormat) -> image::ImageResult<()> {
         let width: u32 = self.width.try_into()
-            .map_err(|_| ImageError::Parameter(ParameterError::from_kind(ParameterErrorKind::DimensionMismatch)))?;
+            .map_err(|_| image::ImageError::Parameter(ParameterError::from_kind(ParameterErrorKind::DimensionMismatch)))?;
         let height: u32 = self.height.try_into()
-            .map_err(|_| ImageError::Parameter(ParameterError::from_kind(ParameterErrorKind::DimensionMismatch)))?;
+            .map_err(|_| image::ImageError::Parameter(ParameterError::from_kind(ParameterErrorKind::DimensionMismatch)))?;
 
         save_buffer_with_format(path, self.as_ref(), width, height, AlphaPixel::<T>::color_type(), format)
     }

@@ -1,11 +1,14 @@
 use std::str::Chars;
 use fontdue::Metrics;
+use thiserror::Error;
 use crate::pixels::pixel::PixelChannel;
 use super::TextSettings;
 
 pub const DEFAULT_VERTICAL_SPACING: f32 = 10.0;
 
+#[derive(Debug, Error)]
 pub enum LayoutError {
+    #[error("Font doesn't have line spacing. Use constant line spacing, or another font.")]
     MissingLineSpacing
 }
 
@@ -89,7 +92,7 @@ impl<'a, T: PixelChannel> LayoutIter<'a, T> {
                 Some((prev_char, next_origin_x)) => match self.settings.layout.use_kern {
                     true => Ok(self.calculate_kerned_origin(next_origin_x, prev_char, next_char)),
                     false => Ok(next_origin_x)
-                }
+                },
                 None => Ok(0),
             }
             LayoutDirection::TopToBottom => match self.settings.layout.line_spacing {
@@ -117,29 +120,31 @@ impl<'a, T: PixelChannel> Iterator for LayoutIter<'a, T> {
 
         let metrics = self.settings.font.metrics(next_char, self.settings.size);
 
-        let origin_x = match self.calculate_origin_x(next_char) {
-            Ok(x) => x,
+        // Glyph x is the coordinate that the rasterized glyph should be drawn at.
+        // It is an offset from the origin by `metrics.xmin`.
+        let glyph_x = match self.calculate_origin_x(next_char) {
+            Ok(x) => x + metrics.xmin as isize,
             Err(e) => return Some(Err(e))
         };
 
-        let origin_y = match self.calculate_baseline(&metrics) {
+        let glyph_y = match self.calculate_baseline(&metrics) {
             Ok(b) => b - metrics.ymin as isize - metrics.height as isize,
             Err(e) => return Some(Err(e))
         };
 
         let next_origin = match self.settings.layout.direction {
             LayoutDirection::LeftToRight => match self.settings.layout.glyph_spacing {
-                SpacingMode::Scale(scale) => origin_x + (scale * metrics.advance_width) as isize,
-                SpacingMode::Constant(spacing) => origin_x + spacing as isize,
+                SpacingMode::Scale(scale) => glyph_x + (scale * metrics.advance_width.ceil()) as isize,
+                SpacingMode::Constant(spacing) => glyph_x + spacing as isize,
             },
             LayoutDirection::TopToBottom => match self.settings.layout.glyph_spacing {
-                SpacingMode::Scale(scale) => origin_y + (scale * (metrics.bounds.height + DEFAULT_VERTICAL_SPACING)) as isize,
-                SpacingMode::Constant(spacing) => origin_y + spacing as isize,
+                SpacingMode::Scale(scale) => glyph_y + (scale * (metrics.bounds.height + DEFAULT_VERTICAL_SPACING)) as isize,
+                SpacingMode::Constant(spacing) => glyph_y + spacing as isize,
             },
         };
 
         self.prev_data = Some((next_char, next_origin));
 
-        Some(Ok((next_char, origin_x, origin_y)))
+        Some(Ok((next_char, glyph_x, glyph_y)))
     }
 }

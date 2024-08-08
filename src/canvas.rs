@@ -20,7 +20,7 @@ impl<T: PixelChannel> Canvas<T> {
         self.layers.push(Box::new(layer));
     }
 
-    pub fn pixel_at(&mut self, x: usize, y: usize) -> AlphaPixel<T> {
+    pub fn pixel_at(&self, x: usize, y: usize) -> AlphaPixel<T> {
         let mut running_pixel = AlphaPixel {r: T::max_value(), g: T::max_value(), b: T::max_value(), a: T::zero()};
         for layer in &self.layers {
             let layer_pixel = layer.filtered_pixel_at(x, y);
@@ -33,7 +33,7 @@ impl<T: PixelChannel> Canvas<T> {
         running_pixel
     }
 
-    pub fn flatten(&mut self) -> Image<T> {
+    pub fn flatten(&self) -> Image<T> {
         let mut pixels = Vec::with_capacity(self.width*self.height);
         for row in 0..self.height {
             for col in 0..self.width {

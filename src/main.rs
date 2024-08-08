@@ -9,25 +9,22 @@ use image_template::{
 };
 
 fn main() {
-    let mut canvas: Canvas<u8> = Canvas::from_dimensions(1000, 1000);
-    let font = include_bytes!(r"C:\Windows\Fonts\Arial.ttf") as &[u8];
+    let mut canvas: Canvas<u8> = Canvas::from_dimensions(500, 500);
+    let font = include_bytes!(r"C:\Windows\Fonts\Impact.ttf") as &[u8];
 
     let text = TextLayer::new(
         TextSettings {
             size: 50.0,
             fill: AlphaPixel { r: 0, g: 255, b: 0, a: 155 },
-            layout: TextLayout { direction: LayoutDirection::TopToBottom, line_spacing: SpacingMode::Constant(300.0), glyph_spacing: SpacingMode::Scale(2.0), use_kern: true  },
+            layout: TextLayout { direction: LayoutDirection::TopToBottom, line_spacing: SpacingMode::Scale(1.0), glyph_spacing: SpacingMode::Scale(1.0), use_kern: false  },
             text: String::from("Testingsentence\ncol"),
             font: fontdue::Font::from_bytes(font, fontdue::FontSettings { collection_index: 0, scale: 100.0, load_substitutions: true  }).unwrap()
         },
-        50,
-        50
-    );
-
-    //let rect = RectangleLayer::new(AlphaPixel { r: 255, g: 255, b: 255, a: 255 }, Rect { x: 500, y: 500, width: 500, height: 500 });
+        0,
+        0
+    ).unwrap();
 
     canvas.add_layer(text);
-    //canvas.add_layer(rect);
     let result = canvas.flatten();
     let _ = result.save("test.png", image::ImageFormat::Png);
 }
