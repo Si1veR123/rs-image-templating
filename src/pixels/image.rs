@@ -32,26 +32,35 @@ impl<T: PixelChannel> Image<T> {
         Self { pixels: vec![], width: 0, height: 0 }
     }
 
-    fn index_of(&self, x: usize, y: usize) -> usize {
+    fn index_of_unchecked(&self, x: usize, y: usize) -> usize {
         self.width*y + x
     }
 
+    fn index_of(&self, x: usize, y: usize) -> Option<usize> {
+        if self.contains_coord(x, y) {
+            Some(self.index_of_unchecked(x, y))
+        } else {
+            None
+        }
+    }
+
     pub fn row(&self, y: usize) -> Option<&[AlphaPixel<T>]> {
-        let range = self.index_of(0, y)..self.index_of(0, y+1);
+        // Last index may not be in the image, but this is okay as the range is exclusive.
+        let range = self.index_of(0, y)?..self.index_of_unchecked(0, y+1);
         self.pixels.get(range)
     }
 
     pub fn row_mut(&mut self, y: usize) -> Option<&mut [AlphaPixel<T>]> {
-        let range = self.index_of(0, y)..self.index_of(0, y+1);
+        let range = self.index_of(0, y)?..self.index_of(0, y+1)?;
         self.pixels.get_mut(range)
     }
 
     pub fn pixel_at(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
-        self.pixels.get(self.index_of(x, y)).copied()
+        self.pixels.get(self.index_of(x, y)?).copied()
     }
 
     pub fn pixel_at_mut(&mut self, x: usize, y: usize) -> Option<&mut AlphaPixel<T>> {
-        let idx = self.index_of(x, y);
+        let idx = self.index_of(x, y)?;
         self.pixels.get_mut(idx)
     }
 
@@ -59,20 +68,21 @@ impl<T: PixelChannel> Image<T> {
         x < self.width && y < self.height
     }
 
-    pub fn draw_subimage(&mut self, image: &Image<T>, x: usize, y: usize, blend: BlendingMethod<T>) {
-        // BOUNDS CHECK
-
+    /// If `None` is returned, then the coordinate is not in the image bounds.
+    pub fn draw_subimage(&mut self, image: &Image<T>, x: usize, y: usize, blend: BlendingMethod<T>) -> Option<()> {
         let subim_width = (x+image.width).min(self.width) - x;
         let subim_height = (y+image.height).min(self.height) - y;
 
         for row in 0..subim_height {
-            let slice = self.index_of(x, y+row)..self.index_of(x+subim_width, y+row);
+            let slice = self.index_of(x, y+row)?..self.index_of_unchecked(x+subim_width, y+row);
             let src_row = &image.row(row).unwrap()[0..subim_width];
             
             self.pixels[slice].iter_mut()
                 .zip(src_row.iter())
                 .for_each(|(dest, src)| *dest = blend.blend(*dest, *src));
         }
+
+        Some(())
     }
 
     pub fn from_pixels(pixels: Vec<AlphaPixel<T>>, width: usize) -> Result<Self, NewImageError> {

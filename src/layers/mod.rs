@@ -28,12 +28,13 @@ pub trait Layer<T: PixelChannel> {
 
     fn unfiltered_pixel_at(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
         if self.get_rect().contains(x, y) {
-            self.unfiltered_pixel_at_unchecked(x, y)
+            Some(self.unfiltered_pixel_at_unchecked(x, y))
         } else {
             None
         }
     }
 
-    /// Get the pixel at a canvas location, before it has been filtered, and assuming it is within the bounding `Rect`
-    fn unfiltered_pixel_at_unchecked(&self, x: usize, y: usize) -> Option<AlphaPixel<T>>;
+    /// Get the pixel at a canvas location, before it has been filtered, and assuming it is within the bounding `Rect`.
+    /// This will panic if the coordinates are not in bounds.
+    fn unfiltered_pixel_at_unchecked(&self, x: usize, y: usize) -> AlphaPixel<T>;
 }

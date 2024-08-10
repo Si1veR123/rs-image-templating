@@ -7,10 +7,11 @@ pub enum BlendingMethod<'a, T: PixelChannel> {
 }
 
 impl<'a, T: PixelChannel> BlendingMethod<'a, T> {
+    /// `pixel2` is the foreground
     pub fn blend(&self, pixel1: AlphaPixel<T>, pixel2: AlphaPixel<T>) -> AlphaPixel<T> {
         match self {
             BlendingMethod::Replace => pixel2,
-            BlendingMethod::OverOperator => over_operator(pixel1, pixel2),
+            BlendingMethod::OverOperator => over_operator(pixel2, pixel1),
             BlendingMethod::Custom(f) => f(pixel1, pixel2),
         }
     }

@@ -5,6 +5,7 @@ use fontdue::Font;
 use layout::LayoutError;
 use std::{collections::HashMap, iter::repeat};
 
+#[derive(Clone)]
 pub struct TextSettings<T: PixelChannel> {
     pub size: f32,
     pub fill: AlphaPixel<T>,
@@ -64,7 +65,12 @@ impl<T: PixelChannel> TextSettings<T> {
             let raster_image = Image::from_pixels(raster_pixels_rgba, metrics.width).unwrap();
             
             for coordinate in coordinates {
-                final_image.draw_subimage(&raster_image, (coordinate.0 - minimum_coord.0) as usize, (coordinate.1 - minimum_coord.1) as usize, BlendingMethod::OverOperator)
+                final_image.draw_subimage(
+                    &raster_image,
+                    (coordinate.0 - minimum_coord.0) as usize, 
+                    (coordinate.1 - minimum_coord.1) as usize,
+                    BlendingMethod::OverOperator
+                ).unwrap();
             }
         }
 
@@ -107,7 +113,7 @@ impl<T: PixelChannel> Layer<T> for TextLayer<T> {
         &self.filters
     }
 
-    fn unfiltered_pixel_at_unchecked(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
-        self.rasterized.pixel_at(x-self.x, y-self.y)
+    fn unfiltered_pixel_at_unchecked(&self, x: usize, y: usize) -> AlphaPixel<T> {
+        self.rasterized.pixel_at(x-self.x, y-self.y).unwrap()
     }
 }

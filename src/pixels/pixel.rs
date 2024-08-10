@@ -9,6 +9,13 @@ pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + Bounded + Into<f3
 impl PixelChannel for u8 {}
 impl PixelChannel for u16 {}
 
+#[macro_export]
+macro_rules! rgba {
+    ($r: literal, $g: literal, $b: literal, $a: literal) => {
+        AlphaPixel { r: $r, g: $g, b: $g, a: $a }
+    };
+}
+
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq)]
 pub struct AlphaPixel<T> {
@@ -16,6 +23,28 @@ pub struct AlphaPixel<T> {
     pub g: T,
     pub b: T,
     pub a: T
+}
+
+impl<T: PixelChannel> AlphaPixel<T> {
+    pub fn white() -> Self {
+        Self { r: T::max_value(), g: T::max_value(), b: T::max_value(), a: T::max_value()  }
+    }
+
+    pub fn black() -> Self {
+        Self { r: T::zero(), g: T::zero(), b: T::zero(), a: T::max_value() }
+    }
+
+    pub fn red() -> Self {
+        Self { r: T::max_value(), g: T::zero(), b: T::zero(), a: T::max_value() }
+    }
+
+    pub fn green() -> Self {
+        Self { r: T::zero(), g: T::max_value(), b: T::zero(), a: T::max_value() }
+    }
+
+    pub fn blue() -> Self {
+        Self { r: T::zero(), g: T::zero(), b: T::max_value(), a: T::max_value() }
+    }
 }
 
 impl<T: PixelChannel> AlphaPixel<T> {

@@ -7,13 +7,14 @@ use crate::{
 
 pub struct Canvas<T> {
     pub layers: Vec<Box<dyn Layer<T>>>,
+    pub background: AlphaPixel<T>,
     pub width: usize,
     pub height: usize
 }
 
 impl<T: PixelChannel> Canvas<T> {
     pub fn from_dimensions(width: usize, height: usize) -> Self {
-        Self { layers: vec![], width, height }
+        Self { layers: vec![], background: AlphaPixel::default(), width, height }
     }
 
     pub fn add_layer<L: Layer<T> + 'static>(&mut self, layer: L) {
@@ -21,12 +22,12 @@ impl<T: PixelChannel> Canvas<T> {
     }
 
     pub fn pixel_at(&self, x: usize, y: usize) -> AlphaPixel<T> {
-        let mut running_pixel = AlphaPixel {r: T::max_value(), g: T::max_value(), b: T::max_value(), a: T::zero()};
+        let mut running_pixel = self.background;
         for layer in &self.layers {
             let layer_pixel = layer.filtered_pixel_at(x, y);
 
             if let Some(p) = layer_pixel {
-                running_pixel = BlendingMethod::OverOperator.blend(p, running_pixel);
+                running_pixel = BlendingMethod::OverOperator.blend(running_pixel, p);
             }
         }
 

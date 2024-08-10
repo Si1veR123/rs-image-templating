@@ -1,6 +1,7 @@
 use crate::{filters::Filter, pixels::{image::Image, pixel::{AlphaPixel, PixelChannel}}, rect::Rect};
 use super::Layer;
 
+#[derive(Default)]
 pub struct ImageLayer<T: PixelChannel> {
     pub filters: Vec<Box<dyn Filter<T>>>,
     pub im: Image<T>,
@@ -17,7 +18,7 @@ impl<T: PixelChannel> Layer<T> for ImageLayer<T> {
         &self.filters
     }
 
-    fn unfiltered_pixel_at_unchecked(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
-        self.im.pixel_at(x-self.x, y-self.y)
+    fn unfiltered_pixel_at_unchecked(&self, x: usize, y: usize) -> AlphaPixel<T> {
+        self.im.pixel_at(x-self.x, y-self.y).unwrap()
     }
 }
