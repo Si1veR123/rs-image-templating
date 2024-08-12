@@ -39,3 +39,50 @@ pub fn over_operator<T: PixelChannel>(pixel1: AlphaPixel<T>, pixel2: AlphaPixel<
         a: T::from_f32(new_alpha*T::max_value().into()).unwrap()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use crate::rgba;
+    use super::*;
+
+    #[test]
+    fn blend_over_u8() {
+        let cases = &[
+            (rgba!(0u8, 0, 0, 0), rgba!(0, 0, 0, 0), rgba!(0, 0, 0, 0)),
+            (rgba!(255u8, 255, 255, 255), rgba!(0, 0, 0, 0), rgba!(255, 255, 255, 255)),
+            (rgba!(255u8, 255, 255, 255), rgba!(100, 100, 100, 0), rgba!(255, 255, 255, 255)),
+            (rgba!(255u8, 255, 255, 0), rgba!(100, 100, 100, 255), rgba!(100, 100, 100, 255)),
+            (rgba!(255u8, 255, 255, 0), rgba!(0, 0, 0, 255), rgba!(0, 0, 0, 255)),
+            (rgba!(100u8, 0, 0, 255), rgba!(0, 50, 100, 255), rgba!(0, 50, 100, 255)),
+            (rgba!(255u8, 255, 255, 255), rgba!(0, 50, 100, 25), rgba!(230, 234, 239, 255)),
+            (rgba!(0u8, 0, 0, 255), rgba!(0, 50, 100, 204), rgba!(0, 40, 80, 255)),
+            (rgba!(100u8, 0, 0, 255), rgba!(0, 50, 100, 102), rgba!(60, 20, 40, 255)),
+            (rgba!(100u8, 55, 231, 102), rgba!(0, 50, 100, 255), rgba!(0, 50, 100, 255)),
+            (rgba!(100u8, 55, 231, 102), rgba!(0, 50, 100, 34), rgba!(72, 53, 194, 122)),
+            (rgba!(255u8, 55, 2, 102), rgba!(0, 50, 200, 254), rgba!(0, 50, 199, 254)),
+            (rgba!(0u8, 0, 0, 53), rgba!(0, 0, 0, 212), rgba!(0, 0, 0, 220)),
+            (rgba!(255u8, 255, 255, 200), rgba!(255, 255, 255, 145), rgba!(255, 255, 255, 231))
+        ];
+
+        for case in cases {
+            assert_eq!(BlendingMethod::OverOperator.blend(case.0, case.1), case.2);
+        }
+    }
+
+    #[test]
+    fn replace() {
+        let cases = &[
+            (rgba!(0u8, 0, 0, 0), rgba!(0, 0, 0, 0), rgba!(0, 0, 0, 0)),
+            (rgba!(255u8, 255, 255, 255), rgba!(255, 255, 255, 255), rgba!(255, 255, 255, 255)),
+            (rgba!(255u8, 255, 255, 255), rgba!(100, 0, 0, 0), rgba!(100, 0, 0, 0)),
+            (rgba!(124u8, 43, 87, 24), rgba!(100, 0, 100, 0), rgba!(100, 0, 100, 0)),
+            (rgba!(0u8, 0, 0, 0), rgba!(100, 0, 100, 25), rgba!(100, 0, 100, 25)),
+            (rgba!(124u8, 43, 87, 0), rgba!(0, 0, 0, 0), rgba!(0, 0, 0, 0))
+        ];
+
+        for case in cases {
+            assert_eq!(BlendingMethod::Replace.blend(case.0, case.1), case.2);
+        }
+    }
+}
+

@@ -11,7 +11,7 @@ pub struct ImageLayer<T: PixelChannel> {
 
 impl<T: PixelChannel> Layer<T> for ImageLayer<T> {
     fn get_rect(&self) -> Rect {
-        Rect { x: self.x, y: self.y, width: self.im.width, height: self.im.height }
+        Rect { x: self.x, y: self.y, width: self.im.get_width(), height: self.im.get_height() }
     }
 
     fn get_filters(&self) -> &[Box<dyn Filter<T>>] {

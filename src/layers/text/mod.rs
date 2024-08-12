@@ -88,7 +88,7 @@ pub struct TextLayer<T: PixelChannel> {
 }
 
 impl<T: PixelChannel> TextLayer<T> {
-    pub fn new(settings: TextSettings<T>, x: usize, y: usize) -> Result<Self, LayoutError> {
+    pub fn try_new(settings: TextSettings<T>, x: usize, y: usize) -> Result<Self, LayoutError> {
         let raster = settings.raster_from_settings()?;
         Ok(Self { settings, rasterized: raster, x, y, filters: vec![] })
     }
@@ -106,7 +106,7 @@ impl<T: PixelChannel> TextLayer<T> {
 
 impl<T: PixelChannel> Layer<T> for TextLayer<T> {
     fn get_rect(&self) -> Rect {
-        Rect { x: self.x, y: self.y, width: self.rasterized.width, height: self.rasterized.height }
+        Rect { x: self.x, y: self.y, width: self.rasterized.get_width(), height: self.rasterized.get_height() }
     }
 
     fn get_filters(&self) -> &[Box<dyn Filter<T>>] {

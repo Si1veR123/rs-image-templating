@@ -1,11 +1,13 @@
-use crate::{filters::Filter, pixels::{pixel::{AlphaPixel, PixelChannel}}, rect::Rect};
+use crate::{filters::Filter, pixels::pixel::{AlphaPixel, PixelChannel}, rect::Rect};
 
 pub mod image;
 pub mod shapes;
 pub mod text;
 
 pub trait Layer<T: PixelChannel> {
-    /// Get a bounding Rect relative to top left of the canvas
+    /// Get a bounding `Rect` relative to top left of the canvas.
+    /// 
+    /// Only pixels in this `Rect` will be drawn
     fn get_rect(&self) -> Rect;
 
     /// Return a slice of filters on this layer
@@ -26,6 +28,9 @@ pub trait Layer<T: PixelChannel> {
         Some(pixel)
     }
 
+    /// Get the pixel at a canvas location, before it has been filtered.
+    /// 
+    /// Includes a check that it is within the layer's bounds, and reutrns None if it isn't.
     fn unfiltered_pixel_at(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
         if self.get_rect().contains(x, y) {
             Some(self.unfiltered_pixel_at_unchecked(x, y))
@@ -35,6 +40,9 @@ pub trait Layer<T: PixelChannel> {
     }
 
     /// Get the pixel at a canvas location, before it has been filtered, and assuming it is within the bounding `Rect`.
+    /// 
     /// This will panic if the coordinates are not in bounds.
+    /// 
+    /// Use `unfiltered_pixel_at` if the coordinate may not be in bounds.
     fn unfiltered_pixel_at_unchecked(&self, x: usize, y: usize) -> AlphaPixel<T>;
 }

@@ -1,6 +1,6 @@
 use bytemuck::NoUninit;
 use num::{Bounded, FromPrimitive, Num, NumCast};
-use image::ExtendedColorType;
+use image::ColorType;
 use std::{fmt::Debug, mem::size_of};
 
 // Requires Into<f32> for some float maths. TODO: Look into alternatives?
@@ -12,7 +12,11 @@ impl PixelChannel for u16 {}
 #[macro_export]
 macro_rules! rgba {
     ($r: literal, $g: literal, $b: literal, $a: literal) => {
-        AlphaPixel { r: $r, g: $g, b: $g, a: $a }
+        AlphaPixel { r: $r, g: $g, b: $b, a: $a }
+    };
+
+    ($r: expr, $g: expr, $b: expr, $a: expr) => {
+        AlphaPixel { r: $r, g: $g, b: $b, a: $a }
     };
 }
 
@@ -48,13 +52,13 @@ impl<T: PixelChannel> AlphaPixel<T> {
 }
 
 impl<T: PixelChannel> AlphaPixel<T> {
-    pub const fn color_type() -> ExtendedColorType {
+    pub const fn color_type() -> ColorType {
         if size_of::<T>() == 1 {
-            ExtendedColorType::Rgba8
+            ColorType::Rgba8
         } else if size_of::<T>() == 2 {
-            ExtendedColorType::Rgba16
+            ColorType::Rgba16
         } else if size_of::<T>() == 4 {
-            ExtendedColorType::Rgba32F
+            ColorType::Rgba32F
         } else {
             unreachable!()
         }
@@ -103,5 +107,41 @@ mod tests {
     fn pixel_alignment() {
         assert_eq!(align_of::<AlphaPixel<u8>>(), 1);
         assert_eq!(align_of::<AlphaPixel<u16>>(), 2);
+    }
+
+    #[test]
+    fn pixel_float_conversion() {
+        let max_pixel: AlphaPixel<u8> = rgba!(255, 255, 255, 255);
+        let max_float_pixel: AlphaPixel<f32> = max_pixel.into();
+        assert_eq!(max_float_pixel, rgba!(1.0, 1.0, 1.0, 1.0));
+
+        let min_pixel: AlphaPixel<u8> = rgba!(0, 0, 0, 0);
+        let min_float_pixel: AlphaPixel<f32> = min_pixel.into();
+        assert_eq!(min_float_pixel, rgba!(0.0, 0.0, 0.0, 0.0));
+
+        let fraction_pixel: AlphaPixel<u8> = rgba!(102, 204, 51, 0);
+        let fraction_float_pixel: AlphaPixel<f32> = fraction_pixel.into();
+        assert_eq!(fraction_float_pixel, rgba!(0.4, 0.8, 0.2, 0.0));
+    }
+
+    #[test]
+    fn debug() {
+        let pixel1 = rgba!(255u8, 255, 255, 255);
+        assert_eq!("rgba(255, 255, 255, 255)", format!("{:?}", pixel1));
+
+        let pixel2 = rgba!(1000u16, 10, 1, 0);
+        assert_eq!("rgba(1000, 10, 1, 0)", format!("{:?}", pixel2));
+    }
+
+    #[test]
+    fn create_pixel_macro() {
+        assert_eq!(rgba!(0, 0, 0, 255), AlphaPixel { r: 0, g: 0, b: 0, a: 255 });
+        assert_eq!(rgba!(1000, 2000, 0, 100), AlphaPixel { r: 1000, g: 2000, b: 0, a: 100 });
+    }
+
+    #[test]
+    fn color_type() {
+        assert_eq!(AlphaPixel::<u8>::color_type(), image::ColorType::Rgba8);
+        assert_eq!(AlphaPixel::<u16>::color_type(), image::ColorType::Rgba16);
     }
 }

@@ -1,9 +1,0 @@
-
-width = 3000
-height = 1500
-
-[[layer]]
-type = "text"
-text = "test text"
-font = "Montserrat"
-size = 200

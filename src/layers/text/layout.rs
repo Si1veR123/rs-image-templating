@@ -101,7 +101,11 @@ impl<'a, T: PixelChannel> LayoutIter<'a, T> {
             LayoutDirection::LeftToRight => match self.settings.layout.line_spacing {
                 SpacingMode::Constant(spacing) => Ok((spacing * (self.row + 1) as f32) as isize),
                 SpacingMode::Scale(scale) => match self.settings.font.horizontal_line_metrics(self.settings.size) {
-                    Some(line_metrics) => Ok((line_metrics.new_line_size * (self.row + 1) as f32 * scale) as isize),
+                    Some(line_metrics) => {
+                        let first_line_height = line_metrics.ascent - line_metrics.descent;
+                        let other_line_height = line_metrics.new_line_size * self.row as f32 * scale;
+                        Ok((first_line_height + other_line_height) as isize)
+                    },
                     None => Err(LayoutError::MissingLineSpacing)
                 }
             },
