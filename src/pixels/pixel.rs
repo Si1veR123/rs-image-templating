@@ -12,16 +12,17 @@ impl PixelChannel for u16 {}
 #[macro_export]
 macro_rules! rgba {
     ($r: literal, $g: literal, $b: literal, $a: literal) => {
-        AlphaPixel { r: $r, g: $g, b: $b, a: $a }
+        $crate::AlphaPixel { r: $r, g: $g, b: $b, a: $a }
     };
 
     ($r: expr, $g: expr, $b: expr, $a: expr) => {
-        AlphaPixel { r: $r, g: $g, b: $b, a: $a }
+        $crate::AlphaPixel { r: $r, g: $g, b: $b, a: $a }
     };
 }
 
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq)]
+/// An RGBA pixel, generic over the channel type `T`.
 pub struct AlphaPixel<T> {
     pub r: T,
     pub g: T,
@@ -52,6 +53,7 @@ impl<T: PixelChannel> AlphaPixel<T> {
 }
 
 impl<T: PixelChannel> AlphaPixel<T> {
+    /// Get the `image::ColorType` for this pixel
     pub const fn color_type() -> ColorType {
         if size_of::<T>() == 1 {
             ColorType::Rgba8
@@ -80,7 +82,7 @@ impl<T: PixelChannel> Default for AlphaPixel<T> {
     }
 }
 
-/// Convert an AlphaPixel<T: PixelChannel> to a AlphaPixel<f32>, where each component is in the range 0-1
+/// Convert an `AlphaPixel<T: PixelChannel>` to a `AlphaPixel<f32>`, where each component is in the range 0-1
 impl<T: PixelChannel> From<AlphaPixel<T>> for AlphaPixel<f32> {
     fn from(value: AlphaPixel<T>) -> Self {
         Self {

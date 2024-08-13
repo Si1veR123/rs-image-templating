@@ -1,7 +1,7 @@
 use std::{iter::Rev, str::{Chars, Split}};
 use fontdue::Metrics;
 use thiserror::Error;
-use crate::pixels::pixel::PixelChannel;
+use crate::PixelChannel;
 use super::TextSettings;
 
 pub const DEFAULT_VERTICAL_SPACING: f32 = 10.0;

@@ -3,7 +3,7 @@ use bytemuck::must_cast_slice;
 use image::{error::{ParameterError, ParameterErrorKind}, save_buffer_with_format, ImageFormat};
 use num::Integer;
 use thiserror::Error;
-use super::{blending::BlendingMethod, pixel::{AlphaPixel, PixelChannel}};
+use crate::{BlendingMethod, AlphaPixel, PixelChannel};
 
 #[derive(Debug, Error, PartialEq)]
 pub enum NewImageError {
@@ -28,15 +28,49 @@ impl<T: PixelChannel> Default for Image<T> {
 }
 
 impl<T: PixelChannel> Image<T> {
+    pub fn get_pixels(&self) -> &[AlphaPixel<T>] {
+        &self.pixels
+    }
+
+    pub fn get_width(&self) -> usize {
+        self.width
+    }
+
+    pub fn get_height(&self) -> usize {
+        self.height
+    }
+
+    /// Create a new empty image, with zero width and height.
+    /// 
+    /// ```
+    /// use image_template::Image;
+    /// let image: Image<u8> = Image::new();
+    /// ```
     pub fn new() -> Self {
         Self { pixels: vec![], width: 0, height: 0 }
     }
 
+    /// Create a new image, filled with `fill`.
+    /// 
+    /// ```
+    /// use image_template::{Image, rgba};
+    /// let image: Image<u8> = Image::new_with_fill(rgba!(255, 0, 0, 255), 10, 10);
+    /// ```
     pub fn new_with_fill(fill: AlphaPixel<T>, width: usize, height: usize) -> Self {
-        let pixels = std::iter::repeat(fill).take(width*height).collect();
+        let pixels = vec![fill; width*height];
         Self { pixels, width, height }
     }
 
+    /// Create a new image, from a [`Vec`] of `AlphaPixel<T>`.
+    /// 
+    /// ```
+    /// use image_template::{AlphaPixel, Image};
+    /// 
+    /// let pixels = vec![AlphaPixel::black(), AlphaPixel::red(), AlphaPixel::blue(), AlphaPixel::white()];
+    /// let image: Image<u8> = Image::from_pixels(pixels, 2).unwrap();
+    /// assert_eq!(image.get_height(), 2);
+    /// assert_eq!(image.get_width(), 2);
+    /// ```
     pub fn from_pixels(pixels: Vec<AlphaPixel<T>>, width: usize) -> Result<Self, NewImageError> {
         if width == 0 {
             if pixels.is_empty() {
@@ -54,6 +88,16 @@ impl<T: PixelChannel> Image<T> {
         }
     }
 
+    /// Create an image from a function that maps coordinates to pixels.
+    /// 
+    /// `function` is a type implementing [`FnMut`] that can be called with an x and y coordinate, and return a pixel.
+    /// 
+    /// ```
+    /// use image_template::{Image, AlphaPixel};
+    /// 
+    /// let generate = |x, y| AlphaPixel { r: x as u8, g: y as u8, b: 255, a: 255 };
+    /// let image: Image<u8> = Image::from_function(10, 10, generate);
+    /// ```
     pub fn from_function<F: FnMut(usize, usize) -> AlphaPixel<T>>(width: usize, height: usize, mut function: F) -> Self {
         let mut pixels = Vec::with_capacity(width*height);
         for row in 0..height {
@@ -64,23 +108,36 @@ impl<T: PixelChannel> Image<T> {
         Self { pixels, width, height }
     }
 
-    pub fn get_pixels(&self) -> &[AlphaPixel<T>] {
-        &self.pixels
-    }
-
-    pub fn get_width(&self) -> usize {
-        self.width
-    }
-
-    pub fn get_height(&self) -> usize {
-        self.height
-    }
-
-    fn index_of_unchecked(&self, x: usize, y: usize) -> usize {
+    /// Get the index into the collection of pixels for a given coordinate.
+    /// 
+    /// This does NOT check whether the coordinate is actually within the image's bounds.
+    /// `Image::index_of` includes a bounds check.
+    /// 
+    /// ```
+    /// use image_template::{Image, AlphaPixel};
+    /// 
+    /// let image: Image<u8> = Image::new_with_fill(AlphaPixel::black(), 5, 5);
+    /// // First 2 pixels of the 3rd row:
+    /// let slice = image.index_of_unchecked(0, 2)..image.index_of_unchecked(2, 2);
+    /// let pixels = image.get_pixels().get(slice).unwrap();
+    /// assert_eq!(pixels, &[AlphaPixel::black(); 2])
+    /// ```
+    pub fn index_of_unchecked(&self, x: usize, y: usize) -> usize {
         self.width*y + x
     }
 
-    fn index_of(&self, x: usize, y: usize) -> Option<usize> {
+    /// Get the index into the collection of pixels for a given coordinate.
+    /// Returns `None` if the coordinate is not within the image's bounds.
+    /// 
+    /// ```
+    /// use image_template::{Image, AlphaPixel};
+    /// 
+    /// let image: Image<u8> = Image::new_with_fill(AlphaPixel::black(), 5, 5);
+    /// // In practice, use `image.pixel_at(0, 0)` instead.
+    /// assert_eq!(image.get_pixels()[image.index_of(0, 0).unwrap()], AlphaPixel::black());
+    /// assert!(image.index_of(10, 10).is_none());
+    /// ```
+    pub fn index_of(&self, x: usize, y: usize) -> Option<usize> {
         if self.contains(x, y) {
             Some(self.index_of_unchecked(x, y))
         } else {
@@ -88,30 +145,86 @@ impl<T: PixelChannel> Image<T> {
         }
     }
 
+    /// Get a row of pixels as a slice
+    /// 
+    /// Returns `None` if `y >= image.get_height()`
+    /// 
+    /// ```
+    /// use image_template::{Image, AlphaPixel};
+    /// 
+    /// let image: Image<u8> = Image::new_with_fill(AlphaPixel::black(), 5, 5);
+    /// let second_row = image.row(1).unwrap();
+    /// assert_eq!(second_row, &[AlphaPixel::black(); 5])
+    /// ```
     pub fn row(&self, y: usize) -> Option<&[AlphaPixel<T>]> {
         // Last index may not be in the image, but this is okay as the range is exclusive.
         let range = self.index_of(0, y)?..self.index_of_unchecked(0, y+1);
         self.pixels.get(range)
     }
 
+    /// Get a row of pixels as a mutable slice
+    /// 
+    /// Returns `None` if `y >= image.get_height()`
+    /// 
+    /// ```
+    /// use image_template::{Image, AlphaPixel};
+    /// 
+    /// let mut image: Image<u8> = Image::new_with_fill(AlphaPixel::black(), 5, 5);
+    /// let second_row = image.row_mut(1).unwrap();
+    /// second_row.fill(AlphaPixel::red());
+    /// assert_eq!(second_row, &[AlphaPixel::red(); 5])
     pub fn row_mut(&mut self, y: usize) -> Option<&mut [AlphaPixel<T>]> {
         let range = self.index_of(0, y)?..self.index_of(0, y+1)?;
         self.pixels.get_mut(range)
     }
 
+    /// Get the pixel at a given coordinate.
+    /// Returns `None` if the coordinate isn't in bounds.
+    /// 
+    /// ```
+    /// use image_template::{Image, AlphaPixel};
+    /// 
+    /// let image: Image<u8> = Image::new_with_fill(AlphaPixel::black(), 5, 5);
+    /// assert_eq!(image.pixel_at(0 , 0).unwrap(), AlphaPixel::black());
+    /// ```
     pub fn pixel_at(&self, x: usize, y: usize) -> Option<AlphaPixel<T>> {
         self.pixels.get(self.index_of(x, y)?).copied()
     }
 
+    /// Get the pixel at a given coordinate.
+    /// Returns `None` if the coordinate isn't in bounds.
+    /// 
+    /// ```
+    /// use image_template::{Image, AlphaPixel};
+    /// 
+    /// let mut image: Image<u8> = Image::new_with_fill(AlphaPixel::black(), 5, 5);
+    /// *image.pixel_at_mut(0, 0).unwrap() = AlphaPixel::red();
+    /// assert_eq!(image.pixel_at(0, 0).unwrap(), AlphaPixel::red());
+    /// ```
     pub fn pixel_at_mut(&mut self, x: usize, y: usize) -> Option<&mut AlphaPixel<T>> {
         let idx = self.index_of(x, y)?;
         self.pixels.get_mut(idx)
     }
 
+    /// Check whether a coordinate is within the bounds of an image.
+    /// 
+    /// ```
+    /// use image_template::{Image, AlphaPixel};
+    /// 
+    /// let image: Image<u8> = Image::new_with_fill(AlphaPixel::black(), 10, 5);
+    /// assert!(image.contains(2, 2));
+    /// assert!(image.contains(2, 4));
+    /// assert!(!image.contains(10, 5));
+    /// assert!(!image.contains(0, 50));
+    /// ```
     pub fn contains(&self, x: usize, y: usize) -> bool {
         x < self.width && y < self.height
     }
 
+    /// Draw another image on top of this image at a coordinate. The subimage is cut off at the edges of this image.
+    /// 
+    /// `blend` is the method to combine the foreground and background. For most cases use [`BlendingMethod::Over`].
+    /// 
     /// If `None` is returned, then the coordinate is not in the image bounds.
     pub fn draw_subimage(&mut self, image: &Image<T>, x: usize, y: usize, blend: BlendingMethod<T>) -> Option<()> {
         let subim_width = (x+image.width).min(self.width) - x;
@@ -129,9 +242,9 @@ impl<T: PixelChannel> Image<T> {
         Some(())
     }
 
-    /// Fails if width or height cannot fit into a `u32`
+    /// Save an image as a file.
     /// 
-    /// Color type is determined by `color_type` method in AlphaPixel
+    /// Will fail if width or height cannot fit into a `u32`
     pub fn save<P: AsRef<Path>>(&self, path: P, format: ImageFormat) -> image::ImageResult<()> {
         let width: u32 = self.width.try_into()
             .map_err(|_| image::ImageError::Parameter(ParameterError::from_kind(ParameterErrorKind::DimensionMismatch)))?;

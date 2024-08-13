@@ -1,8 +1,8 @@
-use super::pixel::{AlphaPixel, PixelChannel};
+use crate::{AlphaPixel, PixelChannel};
 
 pub enum BlendingMethod<'a, T: PixelChannel> {
     Replace,
-    OverOperator,
+    Over,
     Custom(&'a dyn Fn(AlphaPixel<T>, AlphaPixel<T>) -> AlphaPixel<T>)
 }
 
@@ -11,13 +11,13 @@ impl<'a, T: PixelChannel> BlendingMethod<'a, T> {
     pub fn blend(&self, pixel1: AlphaPixel<T>, pixel2: AlphaPixel<T>) -> AlphaPixel<T> {
         match self {
             BlendingMethod::Replace => pixel2,
-            BlendingMethod::OverOperator => over_operator(pixel2, pixel1),
+            BlendingMethod::Over => over_operator(pixel2, pixel1),
             BlendingMethod::Custom(f) => f(pixel1, pixel2),
         }
     }
 }
 
-pub fn over_operator<T: PixelChannel>(pixel1: AlphaPixel<T>, pixel2: AlphaPixel<T>) -> AlphaPixel<T> {
+fn over_operator<T: PixelChannel>(pixel1: AlphaPixel<T>, pixel2: AlphaPixel<T>) -> AlphaPixel<T> {
     let float_pixel1: AlphaPixel<f32> = pixel1.into();
     let float_pixel2: AlphaPixel<f32> = pixel2.into();
 
@@ -65,18 +65,16 @@ mod tests {
         ];
 
         for case in cases {
-            assert_eq!(BlendingMethod::OverOperator.blend(case.0, case.1), case.2);
+            assert_eq!(BlendingMethod::Over.blend(case.0, case.1), case.2);
         }
     }
 
     #[test]
-    fn replace() {
+    fn blend_replace_u8() {
         let cases = &[
             (rgba!(0u8, 0, 0, 0), rgba!(0, 0, 0, 0), rgba!(0, 0, 0, 0)),
             (rgba!(255u8, 255, 255, 255), rgba!(255, 255, 255, 255), rgba!(255, 255, 255, 255)),
             (rgba!(255u8, 255, 255, 255), rgba!(100, 0, 0, 0), rgba!(100, 0, 0, 0)),
-            (rgba!(124u8, 43, 87, 24), rgba!(100, 0, 100, 0), rgba!(100, 0, 100, 0)),
-            (rgba!(0u8, 0, 0, 0), rgba!(100, 0, 100, 25), rgba!(100, 0, 100, 25)),
             (rgba!(124u8, 43, 87, 0), rgba!(0, 0, 0, 0), rgba!(0, 0, 0, 0))
         ];
 

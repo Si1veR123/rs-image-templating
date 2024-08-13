@@ -1,8 +1,9 @@
 use crate::{
-    layers::Layer,
-    pixels::{
-        blending::BlendingMethod, image::Image, pixel::{AlphaPixel, PixelChannel}
-    }
+    Layer,
+    Image,
+    AlphaPixel,
+    PixelChannel,
+    BlendingMethod
 };
 
 pub struct Canvas<T> {
@@ -27,7 +28,7 @@ impl<T: PixelChannel> Canvas<T> {
             let layer_pixel = layer.filtered_pixel_at(x, y);
 
             if let Some(p) = layer_pixel {
-                running_pixel = BlendingMethod::OverOperator.blend(running_pixel, p);
+                running_pixel = BlendingMethod::Over.blend(running_pixel, p);
             }
         }
 

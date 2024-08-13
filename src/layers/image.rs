@@ -1,5 +1,4 @@
-use crate::{filters::Filter, pixels::{image::Image, pixel::{AlphaPixel, PixelChannel}}, rect::Rect};
-use super::Layer;
+use crate::{Filter, Image, AlphaPixel, PixelChannel, Rect, Layer};
 
 #[derive(Default)]
 pub struct ImageLayer<T: PixelChannel> {

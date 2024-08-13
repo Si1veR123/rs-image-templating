@@ -1,4 +1,5 @@
 #[derive(Debug, Clone, Copy, Default)]
+/// A rectangle in 2D space
 pub struct Rect {
     pub x: usize,
     pub y: usize,
@@ -7,7 +8,17 @@ pub struct Rect {
 }
 
 impl Rect {
-    /// Returns false if `width+x` or `height+y` cannot fit in a `usize`
+    /// Check whether a given coordinate is within a `Rect`'s bounds.
+    /// 
+    /// Returns false if `width+x` or `height+y` cannot fit in a `usize`.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::Rect;
+    /// let rect = Rect { x: 2, y: 2, width: 5, height: 10 };
+    /// assert!(rect.contains(3, 3));
+    /// assert!(!rect.contains(1, 1));
+    /// ```
     pub fn contains(&self, x: usize, y: usize) -> bool {
         let upper_x = match self.x.checked_add(self.width) {
             Some(x) => x,
@@ -24,8 +35,6 @@ impl Rect {
 
 #[cfg(test)]
 mod tests {
-    use std::usize;
-
     use super::*;
 
     type ContainsTestCases<'a> = [(Rect, &'a [(usize, usize, bool)])];

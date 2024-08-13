@@ -1,5 +1,5 @@
 use image::GenericImageView;
-use image_template::{canvas::Canvas, layers::text::{layout::TextLayout, TextLayer, TextSettings}, pixels::pixel::AlphaPixel, rgba, pixels::image::Image};
+use image_template::{Canvas, layers::text::{layout::TextLayout, TextLayer, TextSettings}, AlphaPixel, rgba, Image};
 
 use crate::text::get_font;
 

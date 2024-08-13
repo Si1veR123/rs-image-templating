@@ -1,6 +1,16 @@
 pub mod layout;
 
-use crate::{filters::Filter, layers::{text::layout::{TextLayout, LayoutIter}, Layer}, pixels::{blending::BlendingMethod, image::Image, pixel::{AlphaPixel, PixelChannel}}, rect::Rect};
+use crate::{
+    Filter,
+    Layer,
+    BlendingMethod,
+    Image,
+    AlphaPixel,
+    PixelChannel,
+    Rect,
+    layers::text::layout::{TextLayout, LayoutIter}
+};
+
 use fontdue::Font;
 use layout::LayoutError;
 use std::{collections::HashMap, iter::repeat};
@@ -69,7 +79,7 @@ impl<T: PixelChannel> TextSettings<T> {
                     &raster_image,
                     (coordinate.0 - minimum_coord.0) as usize, 
                     (coordinate.1 - minimum_coord.1) as usize,
-                    BlendingMethod::OverOperator
+                    BlendingMethod::Over
                 ).unwrap();
             }
         }

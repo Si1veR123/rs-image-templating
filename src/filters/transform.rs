@@ -1,4 +1,4 @@
-use super::Filter;
+use crate::Filter;
 
 #[derive(Default)]
 pub struct TranslateFilter {
@@ -14,9 +14,8 @@ impl<T> Filter<T> for TranslateFilter {
 
 #[cfg(test)]
 mod tests {
-    use crate::{layers::{shapes::RectangleLayer, Layer}, pixels::pixel::AlphaPixel, rect::Rect};
-
     use super::*;
+    use crate::{layers::shapes::RectangleLayer, Layer, AlphaPixel, Rect};
 
     #[test]
     fn translate_test() {

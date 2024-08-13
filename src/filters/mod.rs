@@ -1,4 +1,4 @@
-use crate::pixels::pixel::AlphaPixel;
+use crate::AlphaPixel;
 
 pub mod transform;
 

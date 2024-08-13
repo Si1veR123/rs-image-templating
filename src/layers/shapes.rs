@@ -1,4 +1,4 @@
-use crate::{filters::Filter, layers::Layer, pixels::pixel::{AlphaPixel, PixelChannel}, rect::Rect};
+use crate::{Filter, Layer, AlphaPixel, PixelChannel, Rect};
 
 
 pub struct RectangleLayer<T> {
