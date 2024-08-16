@@ -8,6 +8,12 @@ pub struct ImageLayer<T: PixelChannel> {
     pub y: usize
 }
 
+impl<T: PixelChannel> ImageLayer<T> {
+    pub fn new(im: Image<T>, x: usize, y: usize) -> Self {
+        Self { filters: vec![], im, x, y }
+    }
+}
+
 impl<T: PixelChannel> Layer<T> for ImageLayer<T> {
     fn get_rect(&self) -> Rect {
         Rect { x: self.x, y: self.y, width: self.im.get_width(), height: self.im.get_height() }

@@ -15,8 +15,4 @@ bytemuck = {version = "1.16.1", features = ["must_cast", "derive"]}
 thiserror = "1.0.63"
 fontdue = "0.9.2"
 either = "1.13.0"
-
 chrono = "0.4.38"
-
-[features]
-

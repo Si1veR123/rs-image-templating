@@ -43,10 +43,13 @@ impl<T> Filter<T> for MatrixTransform {
 
 impl MatrixTransform {
     pub fn new(center_x: f32, center_y: f32) -> Self {
+        // Identity matrix
         Self { matrix: [1.0, 0.0, 0.0, 1.0], center_x, center_y }
     }
     
-    /// This is the inverse matrix of the transformation to be applied to the layer.
+    /// Apply the **INVERSE** matrix of the transformation to be applied to the layer.
+    /// 
+    /// This is because transform filters map the transformed location on to the original location.
     pub fn apply_matrix(mut self, matrix: &[f32; 4]) -> Self {
         let mut new_matrix = [0.0; 4];
         new_matrix[0] = self.matrix[0]*matrix[0] + self.matrix[1]*matrix[2];
@@ -57,6 +60,21 @@ impl MatrixTransform {
         self
     }
 
+    /// Rotate clockwise by `angle`
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::layers::shapes::RectangleLayer;
+    /// use image_template::filters::transform::MatrixTransform;
+    /// use image_template::{Rect, AlphaPixel};
+    /// 
+    /// let transform_filter = Box::new(MatrixTransform::new(0.0, 0.0).rotate(90.0));
+    /// let rotated_rectangle: RectangleLayer<u8> = RectangleLayer {
+    ///     rect: Rect { x: 10, y: 5, width: 5, height: 10 },
+    ///     fill: AlphaPixel::black(),
+    ///     filters: vec![transform_filter]
+    /// };
+    /// ```
     pub fn rotate(self, angle: f32) -> Self {
         let angle_rad = -angle.to_radians();
         let cos = angle_rad.cos();
@@ -68,18 +86,75 @@ impl MatrixTransform {
         self.apply_matrix(&matrix)
     }
 
+    /// Scale by `factor` on x and y axes
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::layers::shapes::RectangleLayer;
+    /// use image_template::filters::transform::MatrixTransform;
+    /// use image_template::{Rect, AlphaPixel};
+    /// 
+    /// let transform_filter = Box::new(MatrixTransform::new(0.0, 0.0).scale(2.0));
+    /// let scaled_rectangle: RectangleLayer<u8> = RectangleLayer {
+    ///     rect: Rect { x: 10, y: 5, width: 5, height: 10 },
+    ///     fill: AlphaPixel::black(),
+    ///     filters: vec![transform_filter]
+    /// };
+    /// ```
     pub fn scale(self, factor: f32) -> Self {
         self.apply_matrix(&[factor.inv(), 0.0, 0.0, factor.inv()])
     }
 
+    /// Scale on individual axes
+    /// # Example
+    /// ```
+    /// use image_template::layers::shapes::RectangleLayer;
+    /// use image_template::filters::transform::MatrixTransform;
+    /// use image_template::{Rect, AlphaPixel};
+    /// 
+    /// let transform_filter = Box::new(MatrixTransform::new(0.0, 0.0).scale_axis(2.0, 1.5));
+    /// let scaled_rectangle: RectangleLayer<u8> = RectangleLayer {
+    ///     rect: Rect { x: 10, y: 5, width: 5, height: 10 },
+    ///     fill: AlphaPixel::black(),
+    ///     filters: vec![transform_filter]
+    /// };
+    /// ```
     pub fn scale_axis(self, scale_x: f32, scale_y: f32) -> Self {
         self.apply_matrix(&[scale_x.inv(), 0.0, 0.0, scale_y.inv()])
     }
 
+    /// [Shear](https://en.wikipedia.org/wiki/Shear_mapping) on the x axis
+    /// # Example
+    /// ```
+    /// use image_template::layers::shapes::RectangleLayer;
+    /// use image_template::filters::transform::MatrixTransform;
+    /// use image_template::{Rect, AlphaPixel};
+    /// 
+    /// let transform_filter = Box::new(MatrixTransform::new(0.0, 0.0).shear_x(0.5));
+    /// let sheared_rectangle: RectangleLayer<u8> = RectangleLayer {
+    ///     rect: Rect { x: 10, y: 5, width: 5, height: 10 },
+    ///     fill: AlphaPixel::black(),
+    ///     filters: vec![transform_filter]
+    /// };
+    /// ```
     pub fn shear_x(self, factor: f32) -> Self {
         self.apply_matrix(&[1.0, -factor, 0.0, 1.0])
     }
 
+    /// [Shear](https://en.wikipedia.org/wiki/Shear_mapping) on the y axis
+    /// # Example
+    /// ```
+    /// use image_template::layers::shapes::RectangleLayer;
+    /// use image_template::filters::transform::MatrixTransform;
+    /// use image_template::{Rect, AlphaPixel};
+    /// 
+    /// let transform_filter = Box::new(MatrixTransform::new(0.0, 0.0).shear_y(-0.5));
+    /// let sheared_rectangle: RectangleLayer<u8> = RectangleLayer {
+    ///     rect: Rect { x: 10, y: 5, width: 5, height: 10 },
+    ///     fill: AlphaPixel::black(),
+    ///     filters: vec![transform_filter]
+    /// };
+    /// ```
     pub fn shear_y(self, factor: f32) -> Self {
         self.apply_matrix(&[1.0, 0.0, -factor, 1.0])
     }

@@ -1,6 +1,7 @@
 use crate::AlphaPixel;
 
 pub mod transform;
+pub mod brightness;
 
 pub trait Filter<T> {
     fn filter_pixel(&self, pixel: AlphaPixel<T>) -> AlphaPixel<T> {

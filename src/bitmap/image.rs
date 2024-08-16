@@ -1,9 +1,9 @@
 use std::path::Path;
 use bytemuck::must_cast_slice;
-use image::{error::{ParameterError, ParameterErrorKind}, save_buffer_with_format, ImageFormat};
+use image::{error::{ParameterError, ParameterErrorKind}, save_buffer_with_format};
 use num::Integer;
 use thiserror::Error;
-use crate::{BlendingMethod, AlphaPixel, PixelChannel};
+use crate::{BlendingMethod, AlphaPixel, PixelChannel, ImageFormat};
 
 #[derive(Debug, Error, PartialEq)]
 pub enum NewImageError {

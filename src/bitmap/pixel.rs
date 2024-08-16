@@ -22,7 +22,7 @@ macro_rules! rgba {
 
 #[repr(C)]
 #[derive(Copy, Clone, PartialEq)]
-/// An RGBA pixel, generic over the channel type `T`.
+/// A RGBA pixel, generic over the channel type `T`.
 pub struct AlphaPixel<T> {
     pub r: T,
     pub g: T,
