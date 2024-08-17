@@ -20,22 +20,21 @@
 //! 
 //! # Basic Example
 //! 
-//! ```
+//! ```rust,no_run
 //! use image_template::{Canvas, Image, AlphaPixel, ImageFormat, layers::image::ImageLayer};
 //! 
-//! fn main() {
-//!     let mut canvas: Canvas<u8> = Canvas::from_dimensions(1000, 1000);
-//! 
-//!     let image = Image::from_function(500, 500, |x, y| AlphaPixel { r: x as u8, g: y as u8, b: 255, a: 255 });
-//!     let image_layer = ImageLayer::new(image, 0, 0);
-//! 
-//!     canvas.add_layer(image_layer);
-//! 
-//!     let final_image = canvas.flatten();
-//!     final_image.save("test.png", ImageFormat::Png).expect("Error saving image.");
-//! }
+//! let mut canvas: Canvas<u8> = Canvas::from_dimensions(1000, 1000);
+//!
+//! let image = Image::from_function(500, 500, |x, y| AlphaPixel { r: x as u8, g: y as u8, b: 255, a: 255 });
+//! let image_layer = ImageLayer::new(image, 0, 0);
+//!
+//! canvas.add_layer(image_layer);
+//!
+//! let final_image = canvas.flatten();
+//! final_image.save("test.png", ImageFormat::Png).expect("Error saving image.");
 //! ```
 
+#[cfg(feature = "image-crate")]
 pub use image::ImageFormat;
 
 mod canvas;

@@ -1,16 +1,9 @@
-use image::GenericImageView;
-use image_template::{Canvas, layers::text::{layout::TextLayout, TextLayer, TextSettings}, AlphaPixel, rgba, Image};
-
+use image_template::{Canvas, layers::text::{layout::TextLayout, TextLayer, TextSettings}, AlphaPixel, Image, ImageFormat};
 use crate::text::get_font;
 
 #[test]
 fn rasterize_basic() {
-    // TODO: create an `Image::from_png`
-    let reference = image::load_from_memory_with_format(include_bytes!("raster_text.png"), image::ImageFormat::Png).unwrap();
-    let reference_image = Image::from_pixels(
-        reference.pixels().map(|p| rgba!(p.2.0[0], p.2.0[1], p.2.0[2], p.2.0[3])).collect(),
-        600
-    ).unwrap();
+    let reference_image: Image<u8> = Image::load_from_memory(include_bytes!("raster_text.png"), ImageFormat::Png).unwrap();
 
     let mut canvas = Canvas::from_dimensions(600, 85);
 

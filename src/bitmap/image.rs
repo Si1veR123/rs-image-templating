@@ -1,9 +1,7 @@
-use std::path::Path;
 use bytemuck::must_cast_slice;
-use image::{error::{ParameterError, ParameterErrorKind}, save_buffer_with_format};
 use num::Integer;
 use thiserror::Error;
-use crate::{BlendingMethod, AlphaPixel, PixelChannel, ImageFormat};
+use crate::{BlendingMethod, AlphaPixel, PixelChannel};
 
 #[derive(Debug, Error, PartialEq)]
 pub enum NewImageError {
@@ -241,23 +239,99 @@ impl<T: PixelChannel> Image<T> {
 
         Some(())
     }
-
-    /// Save an image as a file.
-    /// 
-    /// Will fail if width or height cannot fit into a `u32`
-    pub fn save<P: AsRef<Path>>(&self, path: P, format: ImageFormat) -> image::ImageResult<()> {
-        let width: u32 = self.width.try_into()
-            .map_err(|_| image::ImageError::Parameter(ParameterError::from_kind(ParameterErrorKind::DimensionMismatch)))?;
-        let height: u32 = self.height.try_into()
-            .map_err(|_| image::ImageError::Parameter(ParameterError::from_kind(ParameterErrorKind::DimensionMismatch)))?;
-
-        save_buffer_with_format(path, self.as_ref(), width, height, AlphaPixel::<T>::color_type(), format)
-    }
 }
 
 impl<T: PixelChannel> AsRef<[u8]> for Image<T> {
     fn as_ref(&self) -> &[u8] {
         must_cast_slice(&self.pixels)
+    }
+}
+
+#[cfg(feature = "image-crate")]
+use {
+    std::path::Path,
+    std::fs::File,
+    std::io::BufReader,
+    image::{
+        error::{ParameterError, ParameterErrorKind},
+        save_buffer_with_format,
+        GenericImageView,
+        ImageFormat,
+        Pixel,
+        DynamicImage,
+        ImageResult,
+        ImageError
+    }
+};
+#[cfg(feature = "image-crate")]
+impl<T: PixelChannel> Image<T> {
+    /// Save an image as a file.
+    /// 
+    /// Will fail if width or height cannot fit into a `u32`
+    pub fn save<P: AsRef<Path>>(&self, path: P, format: ImageFormat) -> image::ImageResult<()> {
+        let width: u32 = self.width.try_into()
+            .map_err(|_| ImageError::Parameter(ParameterError::from_kind(ParameterErrorKind::DimensionMismatch)))?;
+        let height: u32 = self.height.try_into()
+            .map_err(|_| ImageError::Parameter(ParameterError::from_kind(ParameterErrorKind::DimensionMismatch)))?;
+
+        save_buffer_with_format(path, self.as_ref(), width, height, AlphaPixel::<T>::color_type(), format)
+    }
+
+    pub fn load_from_memory<B: AsRef<[u8]>>(buffer: B, format: ImageFormat) -> ImageResult<Image<T>> {
+        image::load_from_memory_with_format(buffer.as_ref(), format).map(|im| im.into())
+    }
+
+    pub fn load_from_file<P: AsRef<Path>>(path: P, format: ImageFormat) -> ImageResult<Image<T>> {
+        let file = File::open(path)
+            .map_err(ImageError::IoError)?;
+
+        image::load(BufReader::new(file), format).map(|im| im.into())
+    }
+}
+
+#[cfg(feature = "image-crate")]
+impl<T: PixelChannel> From<DynamicImage> for Image<T> {
+    fn from(value: DynamicImage) -> Self {
+        let (width, height) = (value.width() as usize, value.height() as usize);
+        
+        let pixel_buf = match AlphaPixel::<T>::color_type() {
+            image::ColorType::Rgba8 => {
+                let buf = value.into_rgba8().into_raw();
+
+                // Since T should be u8 when color type is Rgba8, this should be optimised away.
+                let buf_generic = buf.iter().map(|p| T::from_u8(*p).unwrap()).collect();
+
+                AlphaPixel::try_pixel_vec_from_channels(buf_generic).unwrap()
+            },
+            image::ColorType::Rgba16 => {
+                let buf = value.into_rgba16().into_raw();
+                
+                // This should also be optimised away.
+                let buf_generic = buf.iter().map(|p| T::from_u16(*p).unwrap()).collect();
+
+                AlphaPixel::try_pixel_vec_from_channels(buf_generic).unwrap()
+            },
+            _ => unimplemented!(),
+        };
+
+        Self { pixels: pixel_buf, width, height }
+    }
+}
+
+#[cfg(feature = "image-crate")]
+impl<T> GenericImageView for Image<T>
+where 
+    T: PixelChannel,
+    AlphaPixel<T>: Pixel
+{
+    type Pixel = AlphaPixel<T>;
+
+    fn dimensions(&self) -> (u32, u32) {
+        (self.get_width() as u32, self.get_height() as u32)
+    }
+
+    fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
+        Image::pixel_at(self, x as usize, y as usize).unwrap()
     }
 }
 

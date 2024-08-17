@@ -1,4 +1,4 @@
-
+#[cfg(feature = "image-crate")]
 pub mod raster_text;
 pub mod glyph_layout;
 

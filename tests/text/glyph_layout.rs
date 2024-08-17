@@ -1,4 +1,3 @@
-
 use image_template::{layers::text::{layout::{LayoutIter, TextLayout}, TextSettings}, AlphaPixel};
 
 use crate::text::get_font;

@@ -1,5 +1,3 @@
-use std::usize;
-
 use num::traits::Inv;
 
 use crate::Filter;

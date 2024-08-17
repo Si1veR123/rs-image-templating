@@ -1,14 +1,9 @@
-use image::GenericImageView;
-use image_template::{filters::transform::MatrixTransform, layers::image::ImageLayer, AlphaPixel, Canvas, Image, rgba};
+use image_template::{filters::transform::MatrixTransform, layers::image::ImageLayer, AlphaPixel, Canvas, Image, ImageFormat};
 
 
 #[test]
 fn all_matrix_transform() {
-    let reference = image::load_from_memory_with_format(include_bytes!("transform.png"), image::ImageFormat::Png).unwrap();
-    let reference_image = Image::from_pixels(
-        reference.pixels().map(|p| rgba!(p.2.0[0], p.2.0[1], p.2.0[2], p.2.0[3])).collect(),
-        1000
-    ).unwrap();
+    let reference_image = Image::load_from_memory(include_bytes!("transform.png"), ImageFormat::Png).unwrap();
 
     let matrix_filter = Box::new(MatrixTransform::new(500.0, 375.0)
         .shear_x(-0.5)
