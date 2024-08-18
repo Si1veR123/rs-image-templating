@@ -45,11 +45,6 @@ pub struct AlphaPixel<T> {
 }
 
 impl<T: PixelChannel> AlphaPixel<T> {
-    /// Check whether a given value is valid for a pixel channel
-    pub fn is_valid_channel_value(value: T) -> bool {
-        T::min_value() <= value && T::max_value() >= value
-    }
-
     /// `T: u8` rgba(255, 255, 255, 255)
     pub fn white() -> Self {
         Self { r: T::max_value(), g: T::max_value(), b: T::max_value(), a: T::max_value()  }
@@ -113,6 +108,8 @@ impl<T: PixelChannel> AlphaPixel<T> {
 
     /// Convert from a slice of pixel components with a length of at least 4, to an `AlphaPixel` reference.
     /// 
+    /// Note that if there are more than 4 values, they will be ignored.
+    /// 
     /// # None
     /// Returns None if the slice doesn't have at least 4 components, or some of the components don't
     /// have valid values.
@@ -138,6 +135,8 @@ impl<T: PixelChannel> AlphaPixel<T> {
 
     /// Convert from a mutable slice of pixel components with a length of at least 4,
     /// to a mutable `AlphaPixel` reference.
+    /// 
+    /// Note that if there are more than 4 values, they will be ignored.
     /// 
     /// # None
     /// Returns None if the slice doesn't have at least 4 components, or some of the components don't
