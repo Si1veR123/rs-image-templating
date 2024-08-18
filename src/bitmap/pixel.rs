@@ -4,10 +4,22 @@ use std::fmt::Debug;
 use std::mem::ManuallyDrop;
 
 // Requires Into<f32> for some float maths. TODO: Look into alternatives?
-pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + Bounded + Into<f32> + NoUninit + PartialOrd {}
+pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + Bounded + Into<f32> + NoUninit + PartialOrd {
+    fn is_valid_channel_value(self) -> bool {
+        Self::min_value() <= self && Self::max_value() >= self
+    }
+}
 
-impl PixelChannel for u8 {}
-impl PixelChannel for u16 {}
+impl PixelChannel for u8 {
+    fn is_valid_channel_value(self) -> bool {
+        true
+    }
+}
+impl PixelChannel for u16 {
+    fn is_valid_channel_value(self) -> bool {
+        true
+    }
+}
 
 #[macro_export]
 macro_rules! rgba {
@@ -33,50 +45,88 @@ pub struct AlphaPixel<T> {
 }
 
 impl<T: PixelChannel> AlphaPixel<T> {
+    /// Check whether a given value is valid for a pixel channel
     pub fn is_valid_channel_value(value: T) -> bool {
         T::min_value() <= value && T::max_value() >= value
     }
 
+    /// `T: u8` rgba(255, 255, 255, 255)
     pub fn white() -> Self {
         Self { r: T::max_value(), g: T::max_value(), b: T::max_value(), a: T::max_value()  }
     }
 
+    /// `T: u8` rgba(0, 0, 0, 0)
     pub fn black() -> Self {
         Self { r: T::zero(), g: T::zero(), b: T::zero(), a: T::max_value() }
     }
 
+    /// `T: u8` rgba(255, 0, 0, 255)
     pub fn red() -> Self {
         Self { r: T::max_value(), g: T::zero(), b: T::zero(), a: T::max_value() }
     }
 
+    /// `T: u8` rgba(0, 255, 0, 255)
     pub fn green() -> Self {
         Self { r: T::zero(), g: T::max_value(), b: T::zero(), a: T::max_value() }
     }
 
+    /// `T: u8` rgba(0, 0, 255, 255)
     pub fn blue() -> Self {
         Self { r: T::zero(), g: T::zero(), b: T::max_value(), a: T::max_value() }
     }
 
+    /// Get a value representing the luminosity of this pixel, by NTSC formula.
     pub fn luma(self) -> T {
         let float_pixel: AlphaPixel<f32> = self.into();
         let luma = 0.299 * float_pixel.r + 0.587 * float_pixel.g + 0.114 * float_pixel.b;
-        T::from_f32(luma*255.0).unwrap()
+        T::from_f32(luma*(T::max_value().into())).unwrap()
     }
 
+    /// Get a slice of the pixel's channels.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::AlphaPixel;
+    /// let white = AlphaPixel::<u8>::white();
+    /// assert_eq!(white.channels(), &[255, 255, 255, 255]);
+    /// ```
     pub fn channels(&self) -> &[T] {
         let first_subpixel_ptr = self as *const AlphaPixel<T> as *const T;
         // Safety: The layout of `AlphaPixel<T>` is the same as [T; 4]
         unsafe { std::slice::from_raw_parts(first_subpixel_ptr, 4) }
     }
 
+    /// Get a mutable slice of the pixel's channels.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::AlphaPixel;
+    /// let mut white = AlphaPixel::<u8>::white();
+    /// white.channels_mut()[3] = 0;
+    /// assert_eq!(white.channels(), &[255, 255, 255, 0]);
+    /// ```
     pub fn channels_mut(&mut self) -> &mut [T] {
         let first_subpixel_ptr = self as *mut AlphaPixel<T> as *mut T;
         // Safety: The layout of `AlphaPixel<T>` is the same as [T; 4]
         unsafe { std::slice::from_raw_parts_mut(first_subpixel_ptr, 4) }
     }
 
+    /// Convert from a slice of pixel components with a length of at least 4, to an `AlphaPixel` reference.
+    /// 
+    /// # None
+    /// Returns None if the slice doesn't have at least 4 components, or some of the components don't
+    /// have valid values.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::AlphaPixel;
+    /// 
+    /// let components = [255u8, 255, 255, 255];
+    /// let pixel = *AlphaPixel::try_from_slice(&components).unwrap();
+    /// assert_eq!(pixel, AlphaPixel::white());
+    /// ```
     pub fn try_from_slice(slice: &[T]) -> Option<&Self> {
-        if slice.len() >= 4 && slice.iter().take(4).all(|p| AlphaPixel::is_valid_channel_value(*p)) {
+        if slice.len() >= 4 && slice.iter().take(4).all(|p| p.is_valid_channel_value()) {
             // Safety: the first 4 `T`s of the slice have valid values for a pixel channel.
             // `AlphaPixel<T>` has the same layout as [T; 4], and therefore the same layout
             // as &[T] with a length of >= 4.
@@ -86,8 +136,24 @@ impl<T: PixelChannel> AlphaPixel<T> {
         }
     }
 
+    /// Convert from a mutable slice of pixel components with a length of at least 4,
+    /// to a mutable `AlphaPixel` reference.
+    /// 
+    /// # None
+    /// Returns None if the slice doesn't have at least 4 components, or some of the components don't
+    /// have valid values.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::AlphaPixel;
+    /// 
+    /// let mut components = [255u8, 255, 255, 255];
+    /// let mut pixel = AlphaPixel::try_from_slice_mut(&mut components).unwrap();
+    /// pixel.r = 0;
+    /// assert_eq!(components, [0, 255, 255, 255]);
+    /// ```
     pub fn try_from_slice_mut(slice: &mut [T]) -> Option<&mut Self> {
-        if slice.len() >= 4 && slice.iter().take(4).all(|p| AlphaPixel::is_valid_channel_value(*p)) {
+        if slice.len() >= 4 && slice.iter().take(4).all(|p| p.is_valid_channel_value()) {
             // Safety: the first 4 `T`s of the slice have valid values for a pixel channel.
             // `AlphaPixel<T>` has the same layout as [T; 4], and therefore the same layout
             // as &[T] with a length of >= 4.
@@ -97,8 +163,25 @@ impl<T: PixelChannel> AlphaPixel<T> {
         }
     }
 
+    /// Convert from a slice of components to a slice of AlphaPixels.
+    /// 
+    /// # None
+    /// Returns None if any of the components are invalid.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::AlphaPixel;
+    /// 
+    /// let components = [255u8, 255, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255, 100];
+    /// let pixel_slice = AlphaPixel::try_pixel_slice_from_channels(&components).unwrap();
+    /// assert_eq!(pixel_slice, [AlphaPixel::white(), AlphaPixel::black(), AlphaPixel::white()]);
+    /// 
+    /// let empty: [u8; 0] = [];
+    /// let empty_pixel_slice = AlphaPixel::try_pixel_slice_from_channels(&empty).unwrap();
+    /// assert_eq!(empty_pixel_slice, []);
+    /// ```
     pub fn try_pixel_slice_from_channels(channel_slice: &[T]) -> Option<&[AlphaPixel<T>]> {
-        if channel_slice.iter().any(|p| !AlphaPixel::is_valid_channel_value(*p)) {
+        if channel_slice.iter().any(|p| !p.is_valid_channel_value()) {
             return None
         }
 
@@ -111,13 +194,28 @@ impl<T: PixelChannel> AlphaPixel<T> {
         Some(unsafe { std::slice::from_raw_parts(new_start_ptr, new_slice_len) })
     }
 
+    /// Convert from a mutable slice of components to a mutable slice of AlphaPixels.
+    /// 
+    /// # None
+    /// Returns None if any of the components are invalid.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::AlphaPixel;
+    /// 
+    /// let mut components = [255u8, 255, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255, 100];
+    /// let mut pixel_slice = AlphaPixel::try_pixel_slice_from_channels_mut(&mut components).unwrap();
+    /// pixel_slice[0].r = 0;
+    /// pixel_slice[0].g = 0;
+    /// assert_eq!(components, [0, 0, 255, 255, 0, 0, 0, 255, 255, 255, 255, 255, 100]);
+    /// ```
     pub fn try_pixel_slice_from_channels_mut(channel_slice: &mut [T]) -> Option<&mut [AlphaPixel<T>]> {
-        if channel_slice.iter().any(|p| !AlphaPixel::is_valid_channel_value(*p)) {
+        if channel_slice.iter().any(|p| !p.is_valid_channel_value()) {
             return None
         }
 
         let new_slice_len = channel_slice.len() / 4;
-        let new_start_ptr = channel_slice.as_ptr() as *mut AlphaPixel<T>;
+        let new_start_ptr = channel_slice.as_mut_ptr() as *mut AlphaPixel<T>;
         // Safety: pointer is aligned as `AlphaPixel<T>` has an alignment of T.
         // `AlphaPixel<T>` has the same layout as [T; 4]. This is the same as casting &[T] to &[[T; 4]].
         // The new length is valid as `channel_slice` contains `new_slice_len` amount of [T; 4].
@@ -125,8 +223,27 @@ impl<T: PixelChannel> AlphaPixel<T> {
         Some(unsafe { std::slice::from_raw_parts_mut(new_start_ptr, new_slice_len) })
     }
 
+    /// Convert from a `Vec` of components to a `Vec` of `AlphaPixel`s.
+    /// 
+    /// # None
+    /// Returns None if:
+    /// - Any of the components are invalid.
+    /// - The length of the Vec (in `T`s) is not a multiple of 4.
+    /// - The capacity of the Vec (in `T`s) is not a multiple of 4.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::AlphaPixel;
+    /// 
+    /// let component_vec = vec![255u8, 255, 255, 255, 0, 0, 0, 255];
+    /// let pixel_vec = AlphaPixel::try_pixel_vec_from_channels(component_vec).unwrap();
+    /// assert_eq!(pixel_vec, [AlphaPixel::white(), AlphaPixel::black()]);
+    /// 
+    /// let mut invalid_component_vec = vec![255u8, 255, 255, 255, 0, 0, 0, 255, 10];
+    /// assert!(AlphaPixel::try_pixel_vec_from_channels(invalid_component_vec).is_none());
+    /// ```
     pub fn try_pixel_vec_from_channels(channel_vec: Vec<T>) -> Option<Vec<AlphaPixel<T>>> {
-        if channel_vec.iter().any(|p| !AlphaPixel::is_valid_channel_value(*p)) {
+        if channel_vec.iter().any(|p| !p.is_valid_channel_value()) {
             return None
         }
 
@@ -308,7 +425,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::mem::{align_of, size_of};
+    use std::mem::{align_of, size_of, align_of_val, size_of_val};
     use super::*;
 
     #[test]
@@ -359,5 +476,47 @@ mod tests {
     fn color_type() {
         assert_eq!(AlphaPixel::<u8>::color_type(), image::ColorType::Rgba8);
         assert_eq!(AlphaPixel::<u16>::color_type(), image::ColorType::Rgba16);
+    }
+
+    #[test]
+    #[cfg(feature = "image-crate")]
+    fn test_channels() {
+        // u8
+        let mut pixel: AlphaPixel<u8> = AlphaPixel::black();
+        let channels = pixel.channels();
+
+        assert_eq!(align_of_val(channels), align_of::<AlphaPixel<u8>>());
+        assert_eq!(size_of_val(channels), size_of::<AlphaPixel<u8>>());
+        assert_eq!(align_of_val(&channels[0]), align_of_val(&pixel.r));
+        assert_eq!(size_of_val(&channels[0]), size_of_val(&pixel.r));
+        assert_eq!(channels.len(), 4);
+
+        let align_pixel_r = align_of_val(&pixel.r);
+        let size_pixel_r = size_of_val(&pixel.r);
+        let channels_mut = pixel.channels_mut();
+        assert_eq!(align_of_val(channels_mut), align_of::<AlphaPixel<u8>>());
+        assert_eq!(size_of_val(channels_mut), size_of::<AlphaPixel<u8>>());
+        assert_eq!(align_of_val(&channels_mut[0]), align_pixel_r);
+        assert_eq!(size_of_val(&channels_mut[0]), size_pixel_r);
+        assert_eq!(channels_mut.len(), 4);
+
+        // u16
+        let mut pixel: AlphaPixel<u16> = AlphaPixel::black();
+        let channels = pixel.channels();
+
+        assert_eq!(align_of_val(channels), align_of::<AlphaPixel<u16>>());
+        assert_eq!(size_of_val(channels), size_of::<AlphaPixel<u16>>());
+        assert_eq!(align_of_val(&channels[0]), align_of_val(&pixel.r));
+        assert_eq!(size_of_val(&channels[0]), size_of_val(&pixel.r));
+        assert_eq!(channels.len(), 4);
+
+        let align_pixel_r = align_of_val(&pixel.r);
+        let size_pixel_r = size_of_val(&pixel.r);
+        let channels_mut = pixel.channels_mut();
+        assert_eq!(align_of_val(channels_mut), align_of::<AlphaPixel<u16>>());
+        assert_eq!(size_of_val(channels_mut), size_of::<AlphaPixel<u16>>());
+        assert_eq!(align_of_val(&channels_mut[0]), align_pixel_r);
+        assert_eq!(size_of_val(&channels_mut[0]), size_pixel_r);
+        assert_eq!(channels_mut.len(), 4);
     }
 }

@@ -1,6 +1,7 @@
 use num_traits::Inv;
 use crate::Filter;
 
+/// A filter to translate (move) the layer in 2D space.
 #[derive(Default)]
 pub struct TranslateFilter {
     pub x: isize,
@@ -13,6 +14,7 @@ impl<T> Filter<T> for TranslateFilter {
     }
 }
 
+/// A filter to transform a layer by a matrix linear transformation.
 pub struct MatrixTransform {
     pub matrix: [f32; 4],
     pub center_x: f32,

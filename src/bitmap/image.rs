@@ -255,6 +255,7 @@ use {
         error::{ParameterError, ParameterErrorKind},
         save_buffer_with_format,
         GenericImageView,
+        GenericImage,
         ImageFormat,
         Pixel,
         DynamicImage,
@@ -331,6 +332,26 @@ where
 
     fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
         Image::pixel_at(self, x as usize, y as usize).unwrap()
+    }
+}
+
+#[cfg(feature = "image-crate")]
+impl<T> GenericImage for Image<T>
+where 
+    T: PixelChannel,
+    AlphaPixel<T>: Pixel
+{
+    fn get_pixel_mut(&mut self, x: u32, y: u32) -> &mut Self::Pixel {
+        Self::pixel_at_mut(self, x as usize, y as usize).unwrap()
+    }
+
+    fn put_pixel(&mut self, x: u32, y: u32, pixel: Self::Pixel) {
+        *Self::pixel_at_mut(self, x as usize, y as usize).unwrap() = pixel;
+    }
+
+    fn blend_pixel(&mut self, x: u32, y: u32, pixel: Self::Pixel) {
+        let original_pixel = Self::pixel_at_mut(self, x as usize, y as usize).unwrap();
+        *original_pixel = BlendingMethod::Over.blend(*original_pixel, pixel);
     }
 }
 
