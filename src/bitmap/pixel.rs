@@ -1,18 +1,7 @@
 use bytemuck::NoUninit;
-use num::{Bounded, FromPrimitive, Num, NumCast};
+use num_traits::{Bounded, FromPrimitive, Num, NumCast};
 use std::fmt::Debug;
 use std::mem::ManuallyDrop;
-
-/// A trait to check if a pixel's component has a valid value (it is within the bounds defined in the [`Bounded`] trait)
-pub trait ValidPixelChannelValue {
-    fn is_valid_channel_value(&self) -> bool;
-}
-
-impl<T: PixelChannel> ValidPixelChannelValue for T {
-    fn is_valid_channel_value(&self) -> bool {
-        T::min_value() <= *self && T::max_value() >= *self
-    }
-}
 
 // Requires Into<f32> for some float maths. TODO: Look into alternatives?
 pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + Bounded + Into<f32> + NoUninit + PartialOrd {}
@@ -44,6 +33,10 @@ pub struct AlphaPixel<T> {
 }
 
 impl<T: PixelChannel> AlphaPixel<T> {
+    pub fn is_valid_channel_value(value: T) -> bool {
+        T::min_value() <= value && T::max_value() >= value
+    }
+
     pub fn white() -> Self {
         Self { r: T::max_value(), g: T::max_value(), b: T::max_value(), a: T::max_value()  }
     }
@@ -83,7 +76,7 @@ impl<T: PixelChannel> AlphaPixel<T> {
     }
 
     pub fn try_from_slice(slice: &[T]) -> Option<&Self> {
-        if slice.len() >= 4 && slice.iter().take(4).all(|p| p.is_valid_channel_value()) {
+        if slice.len() >= 4 && slice.iter().take(4).all(|p| AlphaPixel::is_valid_channel_value(*p)) {
             // Safety: the first 4 `T`s of the slice have valid values for a pixel channel.
             // `AlphaPixel<T>` has the same layout as [T; 4], and therefore the same layout
             // as &[T] with a length of >= 4.
@@ -94,7 +87,7 @@ impl<T: PixelChannel> AlphaPixel<T> {
     }
 
     pub fn try_from_slice_mut(slice: &mut [T]) -> Option<&mut Self> {
-        if slice.len() >= 4 && slice.iter().take(4).all(|p| p.is_valid_channel_value()) {
+        if slice.len() >= 4 && slice.iter().take(4).all(|p| AlphaPixel::is_valid_channel_value(*p)) {
             // Safety: the first 4 `T`s of the slice have valid values for a pixel channel.
             // `AlphaPixel<T>` has the same layout as [T; 4], and therefore the same layout
             // as &[T] with a length of >= 4.
@@ -105,35 +98,35 @@ impl<T: PixelChannel> AlphaPixel<T> {
     }
 
     pub fn try_pixel_slice_from_channels(channel_slice: &[T]) -> Option<&[AlphaPixel<T>]> {
-        if channel_slice.iter().any(|p| !p.is_valid_channel_value()) {
+        if channel_slice.iter().any(|p| !AlphaPixel::is_valid_channel_value(*p)) {
             return None
         }
 
         let new_slice_len = channel_slice.len() / 4;
         let new_start_ptr = channel_slice.as_ptr() as *const AlphaPixel<T>;
         // Safety: pointer is aligned as `AlphaPixel<T>` has an alignment of T.
-        // `AlphaPixel<T>` has the same layout as [T; 4]. This is the same as casting &[u8] to &[[u8; 4]].
-        // The new length is valid as `channel_slice` contains `new_slice_len` amount of [u8; 4].
+        // `AlphaPixel<T>` has the same layout as [T; 4]. This is the same as casting &[T] to &[[T; 4]].
+        // The new length is valid as `channel_slice` contains `new_slice_len` amount of [T; 4].
         // All `T` are checked to have valid values. 
         Some(unsafe { std::slice::from_raw_parts(new_start_ptr, new_slice_len) })
     }
 
     pub fn try_pixel_slice_from_channels_mut(channel_slice: &mut [T]) -> Option<&mut [AlphaPixel<T>]> {
-        if channel_slice.iter().any(|p| !p.is_valid_channel_value()) {
+        if channel_slice.iter().any(|p| !AlphaPixel::is_valid_channel_value(*p)) {
             return None
         }
 
         let new_slice_len = channel_slice.len() / 4;
         let new_start_ptr = channel_slice.as_ptr() as *mut AlphaPixel<T>;
         // Safety: pointer is aligned as `AlphaPixel<T>` has an alignment of T.
-        // `AlphaPixel<T>` has the same layout as [T; 4]. This is the same as casting &[u8] to &[[u8; 4]].
-        // The new length is valid as `channel_slice` contains `new_slice_len` amount of [u8; 4].
+        // `AlphaPixel<T>` has the same layout as [T; 4]. This is the same as casting &[T] to &[[T; 4]].
+        // The new length is valid as `channel_slice` contains `new_slice_len` amount of [T; 4].
         // All `T` are checked to have valid values. 
         Some(unsafe { std::slice::from_raw_parts_mut(new_start_ptr, new_slice_len) })
     }
 
     pub fn try_pixel_vec_from_channels(channel_vec: Vec<T>) -> Option<Vec<AlphaPixel<T>>> {
-        if channel_vec.iter().any(|p| !p.is_valid_channel_value()) {
+        if channel_vec.iter().any(|p| !AlphaPixel::is_valid_channel_value(*p)) {
             return None
         }
 
@@ -146,7 +139,7 @@ impl<T: PixelChannel> AlphaPixel<T> {
             let ptr = manual_drop_vec.as_mut_ptr() as *mut AlphaPixel<T>;
             // Safety: AlphaPixel<T> has same alignment as T.
             // There are the same amount of bytes in the length and capacity.
-            // All T are valid channel values.
+            // All T are valid channel values, and there are perfect chunks of AlphaPixel<T>
             Some(unsafe { Vec::from_raw_parts(ptr, new_length, new_cap) })
         } else {
             None

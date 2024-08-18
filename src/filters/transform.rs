@@ -1,5 +1,4 @@
-use num::traits::Inv;
-
+use num_traits::Inv;
 use crate::Filter;
 
 #[derive(Default)]

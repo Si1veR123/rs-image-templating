@@ -1,5 +1,4 @@
 use bytemuck::must_cast_slice;
-use num::Integer;
 use thiserror::Error;
 use crate::{BlendingMethod, AlphaPixel, PixelChannel};
 
@@ -78,7 +77,7 @@ impl<T: PixelChannel> Image<T> {
             }
         }
 
-        let (height, rem) = pixels.len().div_rem(&width);
+        let (height, rem) = (pixels.len() / width, pixels.len() % width);
         if rem != 0 {
             Err(NewImageError::IncorrectWidth)
         } else {
