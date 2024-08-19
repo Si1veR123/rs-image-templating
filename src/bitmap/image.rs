@@ -263,7 +263,8 @@ use {
         ImageResult,
         ImageError,
         ImageBuffer
-    }
+    },
+    crate::bitmap::pixel::VecCastError
 };
 #[cfg(feature = "image-crate")]
 impl<T: PixelChannel> Image<T> {
@@ -324,12 +325,12 @@ impl<T: PixelChannel> From<DynamicImage> for Image<T> {
 
 #[cfg(feature = "image-crate")]
 impl<T: PixelChannel, P: Pixel<Subpixel = T>> TryFrom<ImageBuffer<P, Vec<T>>> for Image<T> {
-    type Error = ();
+    type Error = VecCastError<T>;
 
     fn try_from(value: ImageBuffer<P, Vec<T>>) -> Result<Self, Self::Error> {
         let (width, height) = (value.width() as usize, value.height() as usize);
         let buf = value.into_raw();
-        let pixel_buf = AlphaPixel::try_pixel_vec_from_channels(buf).ok_or(())?;
+        let pixel_buf = AlphaPixel::try_pixel_vec_from_channels(buf)?;
         Ok(Self { pixels: pixel_buf, width, height })
     }
 }

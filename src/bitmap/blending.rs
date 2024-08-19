@@ -34,10 +34,10 @@ fn over_operator<T: PixelChannel>(pixel1: AlphaPixel<T>, pixel2: AlphaPixel<T>) 
     let new_color_b = (float_pixel1.b*float_pixel1.a + float_pixel2.b*second_alpha_component)/new_alpha;
 
     AlphaPixel {
-        r: T::from_f32(new_color_r*T::max_pixel_value().into()).unwrap(),
-        g: T::from_f32(new_color_g*T::max_pixel_value().into()).unwrap(),
-        b: T::from_f32(new_color_b*T::max_pixel_value().into()).unwrap(),
-        a: T::from_f32(new_alpha*T::max_pixel_value().into()).unwrap()
+        r: T::from_f32(new_color_r*T::MAX_PIXEL_VALUE.into()).unwrap(),
+        g: T::from_f32(new_color_g*T::MAX_PIXEL_VALUE.into()).unwrap(),
+        b: T::from_f32(new_color_b*T::MAX_PIXEL_VALUE.into()).unwrap(),
+        a: T::from_f32(new_alpha*T::MAX_PIXEL_VALUE.into()).unwrap()
     }
 }
 

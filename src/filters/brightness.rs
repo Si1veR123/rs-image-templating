@@ -6,8 +6,8 @@ pub struct BrightnessFilter {
 
 impl<T: PixelChannel> Filter<T> for BrightnessFilter {
     fn filter_pixel(&self, pixel: AlphaPixel<T>) -> AlphaPixel<T> {
-        let maximum = T::max_pixel_value().into();
-        let minimum = T::min_pixel_value().into();
+        let maximum = T::MAX_PIXEL_VALUE.into();
+        let minimum = T::MIN_PIXEL_VALUE.into();
 
         AlphaPixel {
             r: T::from_f32((pixel.r.into() * self.multiplier).min(maximum).max(minimum)).unwrap(),

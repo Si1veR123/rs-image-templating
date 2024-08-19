@@ -1,46 +1,66 @@
 use bytemuck::NoUninit;
 use num_traits::{FromPrimitive, Num, NumCast};
+use thiserror::Error;
 use std::fmt::Debug;
 use std::mem::ManuallyDrop;
 
-pub trait PixelChannelBounds {
-    fn max_pixel_value() -> Self;
-    fn min_pixel_value() -> Self;
+#[derive(Debug)]
+pub enum VecCastErrorKind {
+    IncorrectCapacity,
+    IncorrectLength,
+    InvalidChannelValue
+}
+
+#[derive(Error)]
+pub struct VecCastError<T>{
+    pub original_vec: Vec<T>,
+    pub kind: VecCastErrorKind
+}
+
+impl<T> Debug for VecCastError<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Error casting Vec: {:?}", self.kind)
+    }
+}
+
+pub trait PixelChannelBounds: PartialOrd + Copy {
+    const MAX_PIXEL_VALUE: Self;
+    const MIN_PIXEL_VALUE: Self;
+
+    fn is_valid_channel_value(self) -> bool {
+        Self::MIN_PIXEL_VALUE <= self && Self::MAX_PIXEL_VALUE >= self
+    }
 }
 
 impl PixelChannelBounds for u8 {
-    fn max_pixel_value() -> Self { Self::MAX }
-    fn min_pixel_value() -> Self { Self::MIN }
+    const MAX_PIXEL_VALUE: Self = Self::MAX;
+    const MIN_PIXEL_VALUE: Self = Self::MIN;
+
+    fn is_valid_channel_value(self) -> bool {
+        true
+    }
 }
 
 impl PixelChannelBounds for u16 {
-    fn max_pixel_value() -> Self { Self::MAX }
-    fn min_pixel_value() -> Self { Self::MIN }
+    const MAX_PIXEL_VALUE: Self = Self::MAX;
+    const MIN_PIXEL_VALUE: Self = Self::MIN;
+
+    fn is_valid_channel_value(self) -> bool {
+        true
+    }
 }
 
 impl PixelChannelBounds for f32 {
-    fn max_pixel_value() -> Self { 1.0 }
-    fn min_pixel_value() -> Self { 0.0 }
+    const MAX_PIXEL_VALUE: Self = 1.0;
+    const MIN_PIXEL_VALUE: Self = 0.0;
 }
 
 // Requires Into<f32> for some float maths. TODO: Look into alternatives?
-pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + PixelChannelBounds + Into<f32> + NoUninit + PartialOrd {
-    fn is_valid_channel_value(self) -> bool {
-        Self::min_pixel_value() <= self && Self::max_pixel_value() >= self
-    }
-}
+pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + PixelChannelBounds + Into<f32> + NoUninit {}
 
-impl PixelChannel for u8 {
-    fn is_valid_channel_value(self) -> bool {
-        true
-    }
-}
+impl PixelChannel for u8 {}
 
-impl PixelChannel for u16 {
-    fn is_valid_channel_value(self) -> bool {
-        true
-    }
-}
+impl PixelChannel for u16 {}
 
 impl PixelChannel for f32 {}
 
@@ -70,42 +90,42 @@ pub struct AlphaPixel<T> {
 impl<T: PixelChannel> AlphaPixel<T> {
     /// `T: u8` rgba(255, 255, 255, 255)
     pub fn white() -> Self {
-        Self { r: T::max_pixel_value(), g: T::max_pixel_value(), b: T::max_pixel_value(), a: T::max_pixel_value()  }
+        Self { r: T::MAX_PIXEL_VALUE, g: T::MAX_PIXEL_VALUE, b: T::MAX_PIXEL_VALUE, a: T::MAX_PIXEL_VALUE  }
     }
 
     /// `T: u8` rgba(0, 0, 0, 0)
     pub fn black() -> Self {
-        Self { r: T::zero(), g: T::zero(), b: T::zero(), a: T::max_pixel_value() }
+        Self { r: T::zero(), g: T::zero(), b: T::zero(), a: T::MAX_PIXEL_VALUE }
     }
 
     /// `T: u8` rgba(255, 0, 0, 255)
     pub fn red() -> Self {
-        Self { r: T::max_pixel_value(), g: T::zero(), b: T::zero(), a: T::max_pixel_value() }
+        Self { r: T::MAX_PIXEL_VALUE, g: T::zero(), b: T::zero(), a: T::MAX_PIXEL_VALUE }
     }
 
     /// `T: u8` rgba(0, 255, 0, 255)
     pub fn green() -> Self {
-        Self { r: T::zero(), g: T::max_pixel_value(), b: T::zero(), a: T::max_pixel_value() }
+        Self { r: T::zero(), g: T::MAX_PIXEL_VALUE, b: T::zero(), a: T::MAX_PIXEL_VALUE }
     }
 
     /// `T: u8` rgba(0, 0, 255, 255)
     pub fn blue() -> Self {
-        Self { r: T::zero(), g: T::zero(), b: T::max_pixel_value(), a: T::max_pixel_value() }
+        Self { r: T::zero(), g: T::zero(), b: T::MAX_PIXEL_VALUE, a: T::MAX_PIXEL_VALUE }
     }
 
     /// Get a value representing the luminosity of this pixel, by NTSC formula.
     pub fn luma(self) -> T {
         let float_pixel: AlphaPixel<f32> = self.as_float_pixel();
         let luma = 0.299 * float_pixel.r + 0.587 * float_pixel.g + 0.114 * float_pixel.b;
-        T::from_f32(luma*(T::max_pixel_value().into())).unwrap()
+        T::from_f32(luma*(T::MAX_PIXEL_VALUE.into())).unwrap()
     }
 
     pub fn as_float_pixel(&self) -> AlphaPixel<f32> {
         AlphaPixel {
-            r: self.r.into() / T::max_pixel_value().into(),
-            g: self.g.into() / T::max_pixel_value().into(),
-            b: self.b.into() / T::max_pixel_value().into(),
-            a: self.a.into() / T::max_pixel_value().into()
+            r: self.r.into() / T::MAX_PIXEL_VALUE.into(),
+            g: self.g.into() / T::MAX_PIXEL_VALUE.into(),
+            b: self.b.into() / T::MAX_PIXEL_VALUE.into(),
+            a: self.a.into() / T::MAX_PIXEL_VALUE.into()
         }
     }
 
@@ -256,8 +276,8 @@ impl<T: PixelChannel> AlphaPixel<T> {
 
     /// Convert from a `Vec` of components to a `Vec` of `AlphaPixel`s.
     /// 
-    /// # None
-    /// Returns None if:
+    /// # Error
+    /// Returns `Err` if:
     /// - Any of the components are invalid.
     /// - The length of the Vec (in `T`s) is not a multiple of 4.
     /// - The capacity of the Vec (in `T`s) is not a multiple of 4.
@@ -271,26 +291,30 @@ impl<T: PixelChannel> AlphaPixel<T> {
     /// assert_eq!(pixel_vec, [AlphaPixel::white(), AlphaPixel::black()]);
     /// 
     /// let mut invalid_component_vec = vec![255u8, 255, 255, 255, 0, 0, 0, 255, 10];
-    /// assert!(AlphaPixel::try_pixel_vec_from_channels(invalid_component_vec).is_none());
+    /// assert!(AlphaPixel::try_pixel_vec_from_channels(invalid_component_vec).is_err());
     /// ```
-    pub fn try_pixel_vec_from_channels(channel_vec: Vec<T>) -> Option<Vec<AlphaPixel<T>>> {
+    pub fn try_pixel_vec_from_channels(channel_vec: Vec<T>) -> Result<Vec<AlphaPixel<T>>, VecCastError<T>> {
         if channel_vec.iter().any(|p| !p.is_valid_channel_value()) {
-            return None
+            return Err(VecCastError { original_vec: channel_vec, kind: VecCastErrorKind::InvalidChannelValue })
         }
 
         // Inspired by https://docs.rs/bytemuck/1.16.1/bytemuck/allocation/fn.try_cast_vec.html
-        if channel_vec.len() % 4 == 0 && channel_vec.capacity() % 4 == 0 {
-            let new_length = channel_vec.len() / 4;
-            let new_cap = channel_vec.capacity() / 4;
+        if channel_vec.len() % 4 == 0 {
+            if channel_vec.capacity() % 4 == 0 {
+                let new_length = channel_vec.len() / 4;
+                let new_cap = channel_vec.capacity() / 4;
 
-            let mut manual_drop_vec = ManuallyDrop::new(channel_vec);
-            let ptr = manual_drop_vec.as_mut_ptr() as *mut AlphaPixel<T>;
-            // Safety: AlphaPixel<T> has same alignment as T.
-            // There are the same amount of bytes in the length and capacity.
-            // All T are valid channel values, and there are perfect chunks of AlphaPixel<T>
-            Some(unsafe { Vec::from_raw_parts(ptr, new_length, new_cap) })
+                let mut manual_drop_vec = ManuallyDrop::new(channel_vec);
+                let ptr = manual_drop_vec.as_mut_ptr() as *mut AlphaPixel<T>;
+                // Safety: AlphaPixel<T> has same alignment as T.
+                // There are the same amount of bytes in the length and capacity.
+                // All T are valid channel values, and there are perfect chunks of AlphaPixel<T>
+                Ok(unsafe { Vec::from_raw_parts(ptr, new_length, new_cap) })
+            } else {
+                Err(VecCastError { original_vec: channel_vec, kind: VecCastErrorKind::IncorrectCapacity })
+            }
         } else {
-            None
+            Err(VecCastError { original_vec: channel_vec, kind: VecCastErrorKind::IncorrectLength })
         }
     }
 }
