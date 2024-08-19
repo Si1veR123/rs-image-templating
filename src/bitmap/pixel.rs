@@ -1,12 +1,32 @@
 use bytemuck::NoUninit;
-use num_traits::{Bounded, FromPrimitive, Num, NumCast};
+use num_traits::{FromPrimitive, Num, NumCast};
 use std::fmt::Debug;
 use std::mem::ManuallyDrop;
 
+pub trait PixelChannelBounds {
+    fn max_pixel_value() -> Self;
+    fn min_pixel_value() -> Self;
+}
+
+impl PixelChannelBounds for u8 {
+    fn max_pixel_value() -> Self { Self::MAX }
+    fn min_pixel_value() -> Self { Self::MIN }
+}
+
+impl PixelChannelBounds for u16 {
+    fn max_pixel_value() -> Self { Self::MAX }
+    fn min_pixel_value() -> Self { Self::MIN }
+}
+
+impl PixelChannelBounds for f32 {
+    fn max_pixel_value() -> Self { 1.0 }
+    fn min_pixel_value() -> Self { 0.0 }
+}
+
 // Requires Into<f32> for some float maths. TODO: Look into alternatives?
-pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + Bounded + Into<f32> + NoUninit + PartialOrd {
+pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + PixelChannelBounds + Into<f32> + NoUninit + PartialOrd {
     fn is_valid_channel_value(self) -> bool {
-        Self::min_value() <= self && Self::max_value() >= self
+        Self::min_pixel_value() <= self && Self::max_pixel_value() >= self
     }
 }
 
@@ -15,11 +35,14 @@ impl PixelChannel for u8 {
         true
     }
 }
+
 impl PixelChannel for u16 {
     fn is_valid_channel_value(self) -> bool {
         true
     }
 }
+
+impl PixelChannel for f32 {}
 
 #[macro_export]
 macro_rules! rgba {
@@ -47,34 +70,43 @@ pub struct AlphaPixel<T> {
 impl<T: PixelChannel> AlphaPixel<T> {
     /// `T: u8` rgba(255, 255, 255, 255)
     pub fn white() -> Self {
-        Self { r: T::max_value(), g: T::max_value(), b: T::max_value(), a: T::max_value()  }
+        Self { r: T::max_pixel_value(), g: T::max_pixel_value(), b: T::max_pixel_value(), a: T::max_pixel_value()  }
     }
 
     /// `T: u8` rgba(0, 0, 0, 0)
     pub fn black() -> Self {
-        Self { r: T::zero(), g: T::zero(), b: T::zero(), a: T::max_value() }
+        Self { r: T::zero(), g: T::zero(), b: T::zero(), a: T::max_pixel_value() }
     }
 
     /// `T: u8` rgba(255, 0, 0, 255)
     pub fn red() -> Self {
-        Self { r: T::max_value(), g: T::zero(), b: T::zero(), a: T::max_value() }
+        Self { r: T::max_pixel_value(), g: T::zero(), b: T::zero(), a: T::max_pixel_value() }
     }
 
     /// `T: u8` rgba(0, 255, 0, 255)
     pub fn green() -> Self {
-        Self { r: T::zero(), g: T::max_value(), b: T::zero(), a: T::max_value() }
+        Self { r: T::zero(), g: T::max_pixel_value(), b: T::zero(), a: T::max_pixel_value() }
     }
 
     /// `T: u8` rgba(0, 0, 255, 255)
     pub fn blue() -> Self {
-        Self { r: T::zero(), g: T::zero(), b: T::max_value(), a: T::max_value() }
+        Self { r: T::zero(), g: T::zero(), b: T::max_pixel_value(), a: T::max_pixel_value() }
     }
 
     /// Get a value representing the luminosity of this pixel, by NTSC formula.
     pub fn luma(self) -> T {
-        let float_pixel: AlphaPixel<f32> = self.into();
+        let float_pixel: AlphaPixel<f32> = self.as_float_pixel();
         let luma = 0.299 * float_pixel.r + 0.587 * float_pixel.g + 0.114 * float_pixel.b;
-        T::from_f32(luma*(T::max_value().into())).unwrap()
+        T::from_f32(luma*(T::max_pixel_value().into())).unwrap()
+    }
+
+    pub fn as_float_pixel(&self) -> AlphaPixel<f32> {
+        AlphaPixel {
+            r: self.r.into() / T::max_pixel_value().into(),
+            g: self.g.into() / T::max_pixel_value().into(),
+            b: self.b.into() / T::max_pixel_value().into(),
+            a: self.a.into() / T::max_pixel_value().into()
+        }
     }
 
     /// Get a slice of the pixel's channels.
@@ -278,18 +310,6 @@ impl<T: PixelChannel> Default for AlphaPixel<T> {
     }
 }
 
-/// Convert an `AlphaPixel<T: PixelChannel>` to a `AlphaPixel<f32>`, where each component is in the range 0-1
-impl<T: PixelChannel> From<AlphaPixel<T>> for AlphaPixel<f32> {
-    fn from(value: AlphaPixel<T>) -> Self {
-        Self {
-            r: value.r.into() / T::max_value().into(),
-            g: value.g.into() / T::max_value().into(),
-            b: value.b.into() / T::max_value().into(),
-            a: value.a.into() / T::max_value().into()
-        }
-    }
-}
-
 #[cfg(feature = "image-crate")]
 use {image::{ColorType, Primitive, Pixel}, std::mem::size_of};
 #[cfg(feature = "image-crate")]
@@ -431,26 +451,28 @@ mod tests {
     fn pixel_no_padding() {
         assert_eq!(size_of::<AlphaPixel<u8>>(), 4);
         assert_eq!(size_of::<AlphaPixel<u16>>(), 8);
+        assert_eq!(size_of::<AlphaPixel<f32>>(), 16);
     }
 
     #[test]
     fn pixel_alignment() {
         assert_eq!(align_of::<AlphaPixel<u8>>(), 1);
         assert_eq!(align_of::<AlphaPixel<u16>>(), 2);
+        assert_eq!(align_of::<AlphaPixel<f32>>(), 4);
     }
 
     #[test]
     fn pixel_float_conversion() {
         let max_pixel: AlphaPixel<u8> = rgba!(255, 255, 255, 255);
-        let max_float_pixel: AlphaPixel<f32> = max_pixel.into();
+        let max_float_pixel: AlphaPixel<f32> = max_pixel.as_float_pixel();
         assert_eq!(max_float_pixel, rgba!(1.0, 1.0, 1.0, 1.0));
 
         let min_pixel: AlphaPixel<u8> = rgba!(0, 0, 0, 0);
-        let min_float_pixel: AlphaPixel<f32> = min_pixel.into();
+        let min_float_pixel: AlphaPixel<f32> = min_pixel.as_float_pixel();
         assert_eq!(min_float_pixel, rgba!(0.0, 0.0, 0.0, 0.0));
 
         let fraction_pixel: AlphaPixel<u8> = rgba!(102, 204, 51, 0);
-        let fraction_float_pixel: AlphaPixel<f32> = fraction_pixel.into();
+        let fraction_float_pixel: AlphaPixel<f32> = fraction_pixel.as_float_pixel();
         assert_eq!(fraction_float_pixel, rgba!(0.4, 0.8, 0.2, 0.0));
     }
 
@@ -465,8 +487,8 @@ mod tests {
 
     #[test]
     fn create_pixel_macro() {
-        assert_eq!(rgba!(0, 0, 0, 255), AlphaPixel { r: 0, g: 0, b: 0, a: 255 });
-        assert_eq!(rgba!(1000, 2000, 0, 100), AlphaPixel { r: 1000, g: 2000, b: 0, a: 100 });
+        assert_eq!(rgba!(0u8, 0, 0, 255), AlphaPixel { r: 0, g: 0, b: 0, a: 255 });
+        assert_eq!(rgba!(1000u16, 2000, 0, 100), AlphaPixel { r: 1000, g: 2000, b: 0, a: 100 });
     }
 
     
@@ -475,28 +497,26 @@ mod tests {
     fn color_type() {
         assert_eq!(AlphaPixel::<u8>::color_type(), image::ColorType::Rgba8);
         assert_eq!(AlphaPixel::<u16>::color_type(), image::ColorType::Rgba16);
+        assert_eq!(AlphaPixel::<f32>::color_type(), image::ColorType::Rgba32F);
     }
 
     #[test]
     #[cfg(feature = "image-crate")]
     fn test_channels() {
+        // Test that AlphaPixel<T: PixelChannel> and [T; 4] have the same size and alignment.
+        // Running miri on this test should catch if `.channels` or `.channels_mut` are unsafe.
+
         // u8
         let mut pixel: AlphaPixel<u8> = AlphaPixel::black();
         let channels = pixel.channels();
 
         assert_eq!(align_of_val(channels), align_of::<AlphaPixel<u8>>());
         assert_eq!(size_of_val(channels), size_of::<AlphaPixel<u8>>());
-        assert_eq!(align_of_val(&channels[0]), align_of_val(&pixel.r));
-        assert_eq!(size_of_val(&channels[0]), size_of_val(&pixel.r));
         assert_eq!(channels.len(), 4);
 
-        let align_pixel_r = align_of_val(&pixel.r);
-        let size_pixel_r = size_of_val(&pixel.r);
         let channels_mut = pixel.channels_mut();
         assert_eq!(align_of_val(channels_mut), align_of::<AlphaPixel<u8>>());
         assert_eq!(size_of_val(channels_mut), size_of::<AlphaPixel<u8>>());
-        assert_eq!(align_of_val(&channels_mut[0]), align_pixel_r);
-        assert_eq!(size_of_val(&channels_mut[0]), size_pixel_r);
         assert_eq!(channels_mut.len(), 4);
 
         // u16
@@ -505,17 +525,24 @@ mod tests {
 
         assert_eq!(align_of_val(channels), align_of::<AlphaPixel<u16>>());
         assert_eq!(size_of_val(channels), size_of::<AlphaPixel<u16>>());
-        assert_eq!(align_of_val(&channels[0]), align_of_val(&pixel.r));
-        assert_eq!(size_of_val(&channels[0]), size_of_val(&pixel.r));
         assert_eq!(channels.len(), 4);
 
-        let align_pixel_r = align_of_val(&pixel.r);
-        let size_pixel_r = size_of_val(&pixel.r);
         let channels_mut = pixel.channels_mut();
         assert_eq!(align_of_val(channels_mut), align_of::<AlphaPixel<u16>>());
         assert_eq!(size_of_val(channels_mut), size_of::<AlphaPixel<u16>>());
-        assert_eq!(align_of_val(&channels_mut[0]), align_pixel_r);
-        assert_eq!(size_of_val(&channels_mut[0]), size_pixel_r);
+        assert_eq!(channels_mut.len(), 4);
+
+        // f32
+        let mut pixel: AlphaPixel<f32> = AlphaPixel::black();
+        let channels = pixel.channels();
+
+        assert_eq!(align_of_val(channels), align_of::<AlphaPixel<f32>>());
+        assert_eq!(size_of_val(channels), size_of::<AlphaPixel<f32>>());
+        assert_eq!(channels.len(), 4);
+
+        let channels_mut = pixel.channels_mut();
+        assert_eq!(align_of_val(channels_mut), align_of::<AlphaPixel<f32>>());
+        assert_eq!(size_of_val(channels_mut), size_of::<AlphaPixel<f32>>());
         assert_eq!(channels_mut.len(), 4);
     }
 }

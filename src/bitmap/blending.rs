@@ -19,8 +19,8 @@ impl<'a, T: PixelChannel> BlendingMethod<'a, T> {
 
 /// [Alpha Compositing](https://en.wikipedia.org/wiki/Alpha_compositing)
 fn over_operator<T: PixelChannel>(pixel1: AlphaPixel<T>, pixel2: AlphaPixel<T>) -> AlphaPixel<T> {
-    let float_pixel1: AlphaPixel<f32> = pixel1.into();
-    let float_pixel2: AlphaPixel<f32> = pixel2.into();
+    let float_pixel1: AlphaPixel<f32> = pixel1.as_float_pixel();
+    let float_pixel2: AlphaPixel<f32> = pixel2.as_float_pixel();
 
     let second_alpha_component = float_pixel2.a*(1.0-float_pixel1.a);
     let new_alpha = float_pixel1.a + second_alpha_component;
@@ -34,10 +34,10 @@ fn over_operator<T: PixelChannel>(pixel1: AlphaPixel<T>, pixel2: AlphaPixel<T>) 
     let new_color_b = (float_pixel1.b*float_pixel1.a + float_pixel2.b*second_alpha_component)/new_alpha;
 
     AlphaPixel {
-        r: T::from_f32(new_color_r*T::max_value().into()).unwrap(),
-        g: T::from_f32(new_color_g*T::max_value().into()).unwrap(),
-        b: T::from_f32(new_color_b*T::max_value().into()).unwrap(),
-        a: T::from_f32(new_alpha*T::max_value().into()).unwrap()
+        r: T::from_f32(new_color_r*T::max_pixel_value().into()).unwrap(),
+        g: T::from_f32(new_color_g*T::max_pixel_value().into()).unwrap(),
+        b: T::from_f32(new_color_b*T::max_pixel_value().into()).unwrap(),
+        a: T::from_f32(new_alpha*T::max_pixel_value().into()).unwrap()
     }
 }
 

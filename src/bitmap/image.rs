@@ -258,9 +258,11 @@ use {
         GenericImage,
         ImageFormat,
         Pixel,
+        Primitive,
         DynamicImage,
         ImageResult,
-        ImageError
+        ImageError,
+        ImageBuffer
     }
 };
 #[cfg(feature = "image-crate")]
@@ -294,36 +296,46 @@ impl<T: PixelChannel> From<DynamicImage> for Image<T> {
     fn from(value: DynamicImage) -> Self {
         let (width, height) = (value.width() as usize, value.height() as usize);
         
-        let pixel_buf = match AlphaPixel::<T>::color_type() {
+        let channel_buf = match AlphaPixel::<T>::color_type() {
             image::ColorType::Rgba8 => {
                 let buf = value.into_rgba8().into_raw();
 
                 // Since T should be u8 when color type is Rgba8, this should be optimised away.
-                let buf_generic = buf.iter().map(|p| T::from_u8(*p).unwrap()).collect();
-
-                AlphaPixel::try_pixel_vec_from_channels(buf_generic).unwrap()
+                buf.iter().map(|p| T::from_u8(*p).unwrap()).collect()
             },
             image::ColorType::Rgba16 => {
                 let buf = value.into_rgba16().into_raw();
                 
                 // This should also be optimised away.
-                let buf_generic = buf.iter().map(|p| T::from_u16(*p).unwrap()).collect();
-
-                AlphaPixel::try_pixel_vec_from_channels(buf_generic).unwrap()
+                buf.iter().map(|p| T::from_u16(*p).unwrap()).collect()
             },
-            _ => unimplemented!(),
+            image::ColorType::Rgba32F => {
+                let buf = value.into_rgba32f().into_raw();
+                
+                // This should also be optimised away.
+                buf.iter().map(|p| T::from_f32(*p).unwrap()).collect()
+            },
+            _ => unimplemented!()
         };
 
-        Self { pixels: pixel_buf, width, height }
+        Self { pixels: AlphaPixel::try_pixel_vec_from_channels(channel_buf).unwrap(), width, height }
     }
 }
 
 #[cfg(feature = "image-crate")]
-impl<T> GenericImageView for Image<T>
-where 
-    T: PixelChannel,
-    AlphaPixel<T>: Pixel
-{
+impl<T: PixelChannel, P: Pixel<Subpixel = T>> TryFrom<ImageBuffer<P, Vec<T>>> for Image<T> {
+    type Error = ();
+
+    fn try_from(value: ImageBuffer<P, Vec<T>>) -> Result<Self, Self::Error> {
+        let (width, height) = (value.width() as usize, value.height() as usize);
+        let buf = value.into_raw();
+        let pixel_buf = AlphaPixel::try_pixel_vec_from_channels(buf).ok_or(())?;
+        Ok(Self { pixels: pixel_buf, width, height })
+    }
+}
+
+#[cfg(feature = "image-crate")]
+impl<T: PixelChannel + Primitive> GenericImageView for Image<T> {
     type Pixel = AlphaPixel<T>;
 
     fn dimensions(&self) -> (u32, u32) {
@@ -336,11 +348,7 @@ where
 }
 
 #[cfg(feature = "image-crate")]
-impl<T> GenericImage for Image<T>
-where 
-    T: PixelChannel,
-    AlphaPixel<T>: Pixel
-{
+impl<T: PixelChannel + Primitive> GenericImage for Image<T> {
     fn get_pixel_mut(&mut self, x: u32, y: u32) -> &mut Self::Pixel {
         Self::pixel_at_mut(self, x as usize, y as usize).unwrap()
     }
