@@ -1,3 +1,5 @@
+use std::iter::repeat;
+
 use bytemuck::must_cast_slice;
 use thiserror::Error;
 use crate::{BlendingMethod, AlphaPixel, PixelChannel};
@@ -238,6 +240,42 @@ impl<T: PixelChannel> Image<T> {
 
         Some(())
     }
+
+    /// Extend the height by `height` number of rows, filling with `fill`.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::{Image, AlphaPixel};
+    /// 
+    /// let mut image: Image<u8> = Image::new_with_fill(AlphaPixel::black(), 5, 5);
+    /// image.extend_height(3, AlphaPixel::red());
+    /// 
+    /// assert_eq!(image.get_pixels().len(), 40);
+    /// assert_eq!(image.get_height(), 8);
+    /// assert_eq!(image.pixel_at(3, 6).unwrap(), AlphaPixel::red());
+    /// ```
+    pub fn extend_height(&mut self, height: usize, fill: AlphaPixel<T>) {
+        self.pixels.extend(repeat(fill).take(height*self.width));
+        self.height += height;
+    }
+
+    /// Shrink the height by `height` number of rows.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::{Image, AlphaPixel};
+    /// 
+    /// let mut image: Image<u8> = Image::new_with_fill(AlphaPixel::black(), 5, 5);
+    /// image.shrink_height(2);
+    /// 
+    /// assert_eq!(image.get_pixels().len(), 15);
+    /// assert_eq!(image.get_height(), 3);
+    /// ```
+    pub fn shrink_height(&mut self, height: usize) {
+        let remaining_height = self.height - height;
+        self.pixels.truncate(remaining_height*self.width);
+        self.height = remaining_height;
+    }
 }
 
 impl<T: PixelChannel> AsRef<[u8]> for Image<T> {
@@ -327,6 +365,14 @@ impl<T: PixelChannel> From<DynamicImage> for Image<T> {
 impl<T: PixelChannel, P: Pixel<Subpixel = T>> TryFrom<ImageBuffer<P, Vec<T>>> for Image<T> {
     type Error = VecCastError<T>;
 
+    /// # Example
+    /// ```
+    /// use image::{ImageBuffer};
+    /// use image_template::{AlphaPixel, PixelChannel, Image};
+    /// 
+    /// let buffer = ImageBuffer::<AlphaPixel<u8>, Vec<u8>>::from_raw(2, 2, vec![255; 16]).unwrap();
+    /// let image: Image<u8> = buffer.try_into().unwrap();
+    /// ```
     fn try_from(value: ImageBuffer<P, Vec<T>>) -> Result<Self, Self::Error> {
         let (width, height) = (value.width() as usize, value.height() as usize);
         let buf = value.into_raw();

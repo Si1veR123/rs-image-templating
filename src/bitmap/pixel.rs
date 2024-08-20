@@ -15,7 +15,7 @@ pub enum VecCastErrorKind {
 pub struct VecCastError<T>{
     pub original_vec: Vec<T>,
     pub kind: VecCastErrorKind
-}
+}   
 
 impl<T> Debug for VecCastError<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -56,7 +56,7 @@ impl PixelChannelBounds for f32 {
 }
 
 // Requires Into<f32> for some float maths. TODO: Look into alternatives?
-pub trait PixelChannel: Copy + Num + NumCast + FromPrimitive + PixelChannelBounds + Into<f32> + NoUninit {}
+pub trait PixelChannel: Num + NumCast + FromPrimitive + PixelChannelBounds + Into<f32> + NoUninit {}
 
 impl PixelChannel for u8 {}
 
