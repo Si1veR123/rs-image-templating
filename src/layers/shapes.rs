@@ -18,7 +18,7 @@ impl<T: PixelChannel> Layer<T> for RectangleLayer<T> {
         self.rect
     }
 
-    fn get_filters(&self) -> &[Box<dyn crate::filters::Filter<T>>] {
+    fn get_filters(&self) -> &[Box<dyn Filter<T>>] {
         &self.filters
     }
 

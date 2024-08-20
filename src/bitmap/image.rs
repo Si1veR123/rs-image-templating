@@ -302,7 +302,7 @@ use {
         ImageError,
         ImageBuffer
     },
-    crate::bitmap::pixel::VecCastError
+    crate::bitmap::pixel::{VecCastError, VecCastErrorKind}
 };
 #[cfg(feature = "image-crate")]
 impl<T: PixelChannel> Image<T> {
@@ -365,6 +365,13 @@ impl<T: PixelChannel> From<DynamicImage> for Image<T> {
 impl<T: PixelChannel, P: Pixel<Subpixel = T>> TryFrom<ImageBuffer<P, Vec<T>>> for Image<T> {
     type Error = VecCastError<T>;
 
+    /// Convert an [`ImageBuffer<P, Vec<T>>`] to an `Image<T>`.
+    /// 
+    /// # Error
+    /// Will return an error if:
+    /// - `Vec<T>` doesn't meet the requirements for [`AlphaPixel::try_pixel_vec_from_channels`]
+    /// - `P` doesn't have 4 channels. In this case, returns the buffer with kind [`VecCastErrorKind::IncorrectLength`]
+    /// 
     /// # Example
     /// ```
     /// use image::{ImageBuffer};
@@ -374,6 +381,10 @@ impl<T: PixelChannel, P: Pixel<Subpixel = T>> TryFrom<ImageBuffer<P, Vec<T>>> fo
     /// let image: Image<u8> = buffer.try_into().unwrap();
     /// ```
     fn try_from(value: ImageBuffer<P, Vec<T>>) -> Result<Self, Self::Error> {
+        if P::CHANNEL_COUNT != 4 {
+            return Err(VecCastError { original_vec: value.into_raw(), kind: VecCastErrorKind::IncorrectLength })
+        }
+
         let (width, height) = (value.width() as usize, value.height() as usize);
         let buf = value.into_raw();
         let pixel_buf = AlphaPixel::try_pixel_vec_from_channels(buf)?;
@@ -390,7 +401,7 @@ impl<T: PixelChannel + Primitive> GenericImageView for Image<T> {
     }
 
     fn get_pixel(&self, x: u32, y: u32) -> Self::Pixel {
-        Image::pixel_at(self, x as usize, y as usize).unwrap()
+        self.pixel_at(x as usize, y as usize).unwrap()
     }
 }
 

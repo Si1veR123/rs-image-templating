@@ -17,7 +17,7 @@ pub trait Filter<T> {
     /// It takes the coordinate of the pixel that is being sampled, and returns
     /// the transformed coordinate to sample the pixel from.
     /// 
-    /// This means that the nactual transformations that are applied to the layer
+    /// This means that the actual transformations that are applied to the layer
     /// are inverted.
     fn filter_transform(&self, x: usize, y: usize) -> (usize, usize) {
         (x, y)

@@ -120,6 +120,12 @@ impl<T: PixelChannel> AlphaPixel<T> {
         T::from_f32(luma*(T::MAX_PIXEL_VALUE.into())).unwrap()
     }
 
+    fn invert(&mut self) {
+        self.r = T::MAX_PIXEL_VALUE - self.r;
+        self.g = T::MAX_PIXEL_VALUE - self.g;
+        self.b = T::MAX_PIXEL_VALUE - self.b;
+    }
+
     pub fn as_float_pixel(&self) -> AlphaPixel<f32> {
         AlphaPixel {
             r: self.r.into() / T::MAX_PIXEL_VALUE.into(),
@@ -352,8 +358,6 @@ impl<T: PixelChannel> AlphaPixel<T> {
     }
 }
 
-// TODO: Move many of these methods to `AlphaPixel<T>`
-
 #[cfg(feature = "image-crate")]
 impl<T> Pixel for AlphaPixel<T>
 where
@@ -456,9 +460,7 @@ where
     }
 
     fn invert(&mut self) {
-        self.r = T::max_value() - self.r;
-        self.g = T::max_value() - self.g;
-        self.b = T::max_value() - self.b;
+        Self::invert(self)
     }
 
     fn blend(&mut self, other: &Self) {
