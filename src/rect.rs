@@ -31,6 +31,16 @@ impl Rect {
 
         x >= self.x && x < upper_x && y >= self.y && y < upper_y
     }
+
+    /// Get the y coordinate of the bottom edge of this Rect
+    pub fn bottom_y(&self) -> usize {
+        self.y + self.height
+    }
+
+    /// Get the x coordinate of the right edge of this Rect
+    pub fn right_x(&self) -> usize {
+        self.x + self.width
+    }
 }
 
 #[cfg(test)]
