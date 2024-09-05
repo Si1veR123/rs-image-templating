@@ -135,6 +135,40 @@ impl<T: PixelChannel> AlphaPixel<T> {
         }
     }
 
+    /// Convert from `AlphaPixel<T>` to `AlphaPixel<U>`, by converting to a float pixel and multiplying by `U::MAX_PIXEL_VALUE`
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::AlphaPixel;
+    /// 
+    /// let pixel_u8: AlphaPixel<u8> = AlphaPixel::red();
+    /// let pixel_u16: AlphaPixel<u16> = pixel_u8.as_different_channel();
+    /// assert_eq!(pixel_u16, AlphaPixel::<u16>::red());
+    /// ```
+    pub fn as_different_channel<U: PixelChannel>(&self) -> AlphaPixel<U> {
+        let float_pixel = self.as_float_pixel();
+        AlphaPixel {
+            r: U::from_f32(U::MAX_PIXEL_VALUE.into()*float_pixel.r).unwrap(),
+            g: U::from_f32(U::MAX_PIXEL_VALUE.into()*float_pixel.g).unwrap(),
+            b: U::from_f32(U::MAX_PIXEL_VALUE.into()*float_pixel.b).unwrap(),
+            a: U::from_f32(U::MAX_PIXEL_VALUE.into()*float_pixel.a).unwrap()
+        }
+    }
+
+    /// Get a hex string from a pixel.
+    /// 
+    /// # Example
+    /// ```
+    /// use image_template::AlphaPixel;
+    /// 
+    /// let pixel: AlphaPixel<u8> = AlphaPixel::red();
+    /// assert_eq!(pixel.as_hex_string(), "ff0000ff");
+    /// ```
+    pub fn as_hex_string(&self) -> String {
+        let u8_pixel: AlphaPixel<u8> = self.as_different_channel();
+        format!("{:02x}{:02x}{:02x}{:02x}", u8_pixel.r, u8_pixel.g, u8_pixel.b, u8_pixel.a)
+    }
+
     /// Get a slice of the pixel's channels.
     /// 
     /// # Example
